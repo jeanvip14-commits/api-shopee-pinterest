@@ -6,9 +6,9 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-# As chaves serão lidas com segurança das Variáveis de Ambiente do Render
-APP_KEY = os.getenv("18363460281")
-APP_SECRET = os.getenv("BE6RSBISYSW4IRCATNFJHMUOBP7OMII7")
+# Lê as chaves com segurança das Variáveis de Ambiente configuradas no Render
+APP_KEY = os.getenv("SHOPEE_APP_KEY")
+APP_SECRET = os.getenv("SHOPEE_APP_SECRET")
 
 def generate_signature(payload_string, timestamp):
     base_string = f"{APP_KEY}{timestamp}{payload_string}{APP_SECRET}"
@@ -21,7 +21,7 @@ def home():
 @app.get("/shopee-offers")
 def get_shopee_offers():
     if not APP_KEY or not APP_SECRET:
-        return {"error": "Chaves da Shopee não configuradas nas Variáveis de Ambiente!"}
+        return {"error": "Chaves da Shopee nao configuradas nas Variaveis de Ambiente!"}
         
     timestamp = int(time.time())
     url = "https://open-api.affiliate.shopee.com.br/graphql"
