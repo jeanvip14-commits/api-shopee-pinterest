@@ -3,7 +3,7 @@ import time
 import hashlib
 import json
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 
 app = FastAPI()
 
@@ -20,15 +20,18 @@ def home():
     return {"status": "API Shopee a rodar de forma segura!"}
 
 @app.get("/shopee-offers")
-def get_shopee_offers():
+def get_shopee_offers(
+    page: int = Query(1, description="Número da página"),
+    limit: int = Query(100, description="Quantidade de produtos por busca (máx 100)")
+):
     if not APP_KEY or not APP_SECRET:
         return {"error": "Chaves da Shopee nao configuradas nas Variaveis de Ambiente!"}
         
     timestamp = int(time.time())
     url = "https://open-api.affiliate.shopee.com.br/graphql"
     
-    # Query GraphQL minificada
-    query_str = "query{productOfferV2(page:1,limit:10,sortType:1){nodes{itemId,productName,imageUrl,price,offerLink}}}"
+    # Query GraphQL dinâmica utilizando os parâmetros page e limit
+    query_str = f"query{{productOfferV2(page:{page},limit:{limit},sortType:1){{nodes{{itemId,productName,imageUrl,price,offerLink}}}}}}"
     payload = {"query": query_str}
     payload_json_compact = json.dumps(payload, separators=(',', ':'))
     
