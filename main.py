@@ -3,7 +3,7 @@ import time
 import hashlib
 import json
 import requests
-import feedparser
+from bs4 import BeautifulSoup
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -49,9 +49,10 @@ def get_mercadolivre_offers(
     q: str = Query("ofertas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
+    # RSS de ofertas do Mercado Livre
     rss_url = "https://lista.mercadolivre.com.br/ofertas_Rss-xml"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
     
     try:
@@ -59,13 +60,15 @@ def get_mercadolivre_offers(
         if response.status_code != 200:
             return {"error": f"Erro Mercado Livre: {response.status_code}", "results": []}
             
-        feed = feedparser.parse(response.content)
-        results = []
+        # BeautifulSoup com parser XML lê o RSS perfeitamente mesmo com tags mal formatadas
+        soup = BeautifulSoup(response.text, "xml")
+        items = soup.find_all("item")
         
-        for entry in feed.entries[:limit]:
-            title = entry.get("title", "").strip()
-            link = entry.get("link", "").strip()
-            description = entry.get("summary", "").strip()
+        results = []
+        for item in items[:limit]:
+            title = item.find("title").text.strip() if item.find("title") else ""
+            link = item.find("link").text.strip() if item.find("link") else ""
+            description = item.find("description").text.strip() if item.find("description") else ""
             
             results.append({
                 "title": title,
