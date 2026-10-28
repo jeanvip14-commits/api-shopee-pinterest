@@ -20,7 +20,7 @@ def generate_shopee_signature(payload_str, timestamp):
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
 
 def get_meli_access_token():
-    """Gera um access_token temporário via Client Credentials no Mercado Livre"""
+    """Gera token via Client Credentials caso as chaves estejam presentes"""
     if not MELI_APP_ID or not MELI_CLIENT_SECRET:
         return None
         
@@ -71,37 +71,47 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("ofertas", description="Termo de busca"),
+    q: str = Query("ferramentas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
     token = get_meli_access_token()
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
     }
     
     if token:
         headers["Authorization"] = f"Bearer {token}"
         
-    search_term = q.strip() if q and q.strip() else "ofertas"
+    search_term = q.strip() if q and q.strip() else "ferramentas"
+    
+    # 1. Tenta buscar pelo termo especificado
     url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=12)
         data = response.json()
+        raw_results = data.get("results", [])
         
+        # 2. Se a busca por termo vier vazia, consulta por categoria de ofertas (MLB1051 - Ferramentas e Casa)
+        if not raw_results:
+            fallback_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
+            response = requests.get(fallback_url, headers=headers, timeout=12)
+            data = response.json()
+            raw_results = data.get("results", [])
+            
         results = []
-        if "results" in data and data["results"]:
-            for item in data["results"]:
-                results.append({
-                    "id": item.get("id"),
-                    "title": item.get("title"),
-                    "permalink": item.get("permalink"),
-                    "price": item.get("price"),
-                    "thumbnail": item.get("thumbnail"),
-                    "description": f"Confira {item.get('title')} no Mercado Livre!"
-                })
+        for item in raw_results:
+            results.append({
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "permalink": item.get("permalink"),
+                "price": item.get("price"),
+                "thumbnail": item.get("thumbnail"),
+                "description": f"Aproveite esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
+            })
                 
-        return {"results": results}
+        return {"results": results, "total": len(results)}
     except Exception as e:
         return {"error": str(e), "results": []}
