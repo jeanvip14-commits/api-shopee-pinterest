@@ -49,33 +49,40 @@ def get_mercadolivre_offers(
     q: str = Query("ofertas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
-    # RSS de ofertas do Mercado Livre
-    rss_url = "https://lista.mercadolivre.com.br/ofertas_Rss-xml"
+    # Endpoint de ofertas do Mercado Livre Brasil
+    url = f"https://www.mercadolivre.com.br/ofertas?page=1"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
     }
     
     try:
-        response = requests.get(rss_url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code != 200:
             return {"error": f"Erro Mercado Livre: {response.status_code}", "results": []}
             
-        # BeautifulSoup com parser XML lê o RSS perfeitamente mesmo com tags mal formatadas
-        soup = BeautifulSoup(response.text, "xml")
-        items = soup.find_all("item")
-        
+        soup = BeautifulSoup(response.text, "html.parser")
         results = []
+        
+        # Procura os blocos de produtos de ofertas na página HTML
+        items = soup.find_all("li", class_="promotion-item")
+        if not items:
+            items = soup.find_all("div", class_="poly-card")
+            
         for item in items[:limit]:
-            title = item.find("title").text.strip() if item.find("title") else ""
-            link = item.find("link").text.strip() if item.find("link") else ""
-            description = item.find("description").text.strip() if item.find("description") else ""
+            title_tag = item.find("p", class_="promotion-item__title") or item.find("a", class_="poly-component__title") or item.find("h2")
+            link_tag = item.find("a", class_="promotion-item__link-empty") or item.find("a", href=True)
             
-            results.append({
-                "title": title,
-                "permalink": link,
-                "description": description
-            })
+            title = title_tag.text.strip() if title_tag else "Oferta Mercado Livre"
+            link = link_tag["href"] if link_tag and "href" in link_tag.attrs else ""
             
+            if link:
+                results.append({
+                    "title": title,
+                    "permalink": link,
+                    "description": f"Confira esta oferta no Mercado Livre: {title}"
+                })
+                
         return {"results": results}
     except Exception as e:
         return {"error": str(e), "results": []}
