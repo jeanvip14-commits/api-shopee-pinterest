@@ -19,26 +19,6 @@ def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
 
-def get_meli_access_token():
-    if not MELI_APP_ID or not MELI_CLIENT_SECRET:
-        return None
-        
-    url = "https://api.mercadolibre.com/oauth/token"
-    payload = {
-        "grant_type": "client_credentials",
-        "client_id": MELI_APP_ID,
-        "client_secret": MELI_CLIENT_SECRET
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    
-    try:
-        res = requests.post(url, data=payload, headers=headers, timeout=10)
-        if res.status_code == 200:
-            return res.json().get("access_token")
-    except Exception:
-        pass
-    return None
-
 @app.get("/")
 def home():
     return {"status": "API Shopee e Mercado Livre operacionais!"}
@@ -70,35 +50,41 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    limit: int = Query(50, description="Quantidade de produtos")
+    ids: str = Query("MLB3458921020,MLB3301298412,MLB3512903112,MLB3201948201", description="IDs de anúncios separados por vírgula")
 ):
-    token = get_meli_access_token()
+    """
+    Busca produtos do Mercado Livre diretamente por ID de anúncio.
+    Este endpoint (/items?ids=...) NÃO é bloqueado pela Cloudflare em servidores cloud.
+    """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "application/json"
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-        
-    results = []
-    url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&sort=price_asc&limit={limit}"
+    
+    # Limpa os IDs informados
+    item_ids_list = [i.strip() for i in ids.split(",") if i.strip()]
+    ids_param = ",".join(item_ids_list)
+    
+    url = f"https://api.mercadolibre.com/items?ids={ids_param}"
     
     try:
         resp = requests.get(url, headers=headers, timeout=12)
+        results = []
+        
         if resp.status_code == 200:
-            data = resp.json()
-            raw_results = data.get("results", [])
-            
-            for item in raw_results:
-                results.append({
-                    "id": item.get("id"),
-                    "title": item.get("title"),
-                    "permalink": item.get("permalink"),
-                    "price": item.get("price"),
-                    "thumbnail": item.get("thumbnail"),
-                    "description": f"Confira a oferta: {item.get('title')} por R$ {item.get('price')}"
-                })
-                
+            items_data = resp.json()
+            for doc in items_data:
+                if doc.get("code") == 200:
+                    body = doc.get("body", {})
+                    results.append({
+                        "id": body.get("id"),
+                        "title": body.get("title"),
+                        "permalink": body.get("permalink"),
+                        "price": body.get("price"),
+                        "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
+                        "description": f"Confira a oferta: {body.get('title')} por R$ {body.get('price')}"
+                    })
+                    
         return {"results": results, "total": len(results)}
     except Exception as e:
         return {"error": str(e), "results": []}
