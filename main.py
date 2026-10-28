@@ -4,6 +4,7 @@ import hashlib
 import json
 import requests
 from fastapi import FastAPI, Query
+from curl_cffi import requests as curl_requests
 
 app = FastAPI()
 
@@ -51,24 +52,16 @@ def get_mercadolivre_offers(
     search_term = q.strip() if q and q.strip() else "ofertas"
     url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
-    session = requests.Session()
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://www.mercadolivre.com.br/",
-        "Origin": "https://www.mercadolivre.com.br"
-    }
-    
     try:
-        response = session.get(url, headers=headers, timeout=15)
+        # curl_cffi simula exatamente a impressão digital TLS do Chrome 120
+        response = curl_requests.get(url, impersonate="chrome120", timeout=15)
         data = response.json()
         
-        # Se for bloqueado (403) ou nao trouxer 'results', recorre ao endpoint de categoria oficial
+        # Fallback para categoria se não houver resultados
         if response.status_code != 200 or "results" not in data or not data["results"]:
             cat_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
-            cat_response = session.get(cat_url, headers=headers, timeout=15)
-            data = cat_response.json()
+            fallback_resp = curl_requests.get(cat_url, impersonate="chrome120", timeout=15)
+            data = fallback_resp.json()
             
         return data
     except Exception as e:
