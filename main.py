@@ -45,23 +45,30 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("ofertas", description="Termo de busca"),
+    q: str = Query("casa", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
-    search_term = q.strip() if q and q.strip() else "ofertas"
-    # Consulta a API oficial com limite de itens
-    url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
+    search_term = q.strip() if q and q.strip() else "casa"
+    
+    # URL 1: Busca por termo
+    url_search = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
+    # URL 2: Busca por categoria geral (Fallback garantido caso a busca venha vazia)
+    url_category = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Accept-Language": "pt-BR,pt;q=0.9"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url_search, headers=headers, timeout=10)
         data = response.json()
         
+        # Se a busca principal vier vazia ou sem resultados, aciona o fallback por categoria
+        if "results" not in data or not data["results"]:
+            response = requests.get(url_category, headers=headers, timeout=10)
+            data = response.json()
+            
         results = []
         if "results" in data and data["results"]:
             for item in data["results"]:
@@ -72,7 +79,7 @@ def get_mercadolivre_offers(
                     "price": item.get("price"),
                     "thumbnail": item.get("thumbnail")
                 })
-        
+                
         return {"results": results}
     except Exception as e:
         return {"error": str(e), "results": []}
