@@ -53,11 +53,11 @@ def get_mercadolivre_offers(
     url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
     try:
-        # curl_cffi simula exatamente a impressão digital TLS do Chrome 120
+        # O curl_cffi simula a assinatura TLS do Chrome 120 e contorna o erro 403 do Mercado Livre
         response = curl_requests.get(url, impersonate="chrome120", timeout=15)
         data = response.json()
         
-        # Fallback para categoria se não houver resultados
+        # Fallback para a categoria padrão caso a busca não retorne itens
         if response.status_code != 200 or "results" not in data or not data["results"]:
             cat_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
             fallback_resp = curl_requests.get(cat_url, impersonate="chrome120", timeout=15)
