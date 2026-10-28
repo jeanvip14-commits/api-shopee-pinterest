@@ -20,7 +20,7 @@ def generate_shopee_signature(payload_str, timestamp):
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
 
 def get_meli_access_token():
-    """Gera token via Client Credentials caso as chaves estejam presentes"""
+    """Gera token via Client Credentials com as credenciais oficiais da aplicação"""
     if not MELI_APP_ID or not MELI_CLIENT_SECRET:
         return None
         
@@ -71,47 +71,47 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("ferramentas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
     token = get_meli_access_token()
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json"
-    }
-    
+    headers = {"Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
         
-    search_term = q.strip() if q and q.strip() else "ferramentas"
+    results = []
     
-    # 1. Tenta buscar pelo termo especificado
-    url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
+    # 1. Consulta itens mais visitados/em destaque da categoria principal (Ferramentas/Casa - MLB1051)
+    highlights_url = f"https://api.mercadolibre.com/highlights/MLB/category/MLB1051"
     
     try:
-        response = requests.get(url, headers=headers, timeout=12)
-        data = response.json()
-        raw_results = data.get("results", [])
-        
-        # 2. Se a busca por termo vier vazia, consulta por categoria de ofertas (MLB1051 - Ferramentas e Casa)
-        if not raw_results:
-            fallback_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
-            response = requests.get(fallback_url, headers=headers, timeout=12)
-            data = response.json()
-            raw_results = data.get("results", [])
+        resp = requests.get(highlights_url, headers=headers, timeout=12)
+        if resp.status_code == 200:
+            content = resp.json()
+            items_list = content.get("content", [])
             
-        results = []
-        for item in raw_results:
-            results.append({
-                "id": item.get("id"),
-                "title": item.get("title"),
-                "permalink": item.get("permalink"),
-                "price": item.get("price"),
-                "thumbnail": item.get("thumbnail"),
-                "description": f"Aproveite esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
-            })
+            # Extrai os IDs dos produtos retornados
+            item_ids = [item.get("id") for item in items_list if item.get("type") == "item" and item.get("id")][:limit]
+            
+            if item_ids:
+                # Consulta os detalhes multietapa de cada item diretamente
+                ids_str = ",".join(item_ids[:20])  # Lote de até 20 itens por requisição
+                details_url = f"https://api.mercadolibre.com/items?ids={ids_str}"
                 
+                resp_details = requests.get(details_url, headers=headers, timeout=12)
+                if resp_details.status_code == 200:
+                    details_data = resp_details.json()
+                    for doc in details_data:
+                        if doc.get("code") == 200:
+                            body = doc.get("body", {})
+                            results.append({
+                                "id": body.get("id"),
+                                "title": body.get("title"),
+                                "permalink": body.get("permalink"),
+                                "price": body.get("price"),
+                                "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
+                                "description": f"Confira a oferta: {body.get('title')} por R$ {body.get('price')}"
+                            })
+                            
         return {"results": results, "total": len(results)}
     except Exception as e:
         return {"error": str(e), "results": []}
