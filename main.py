@@ -3,6 +3,7 @@ import time
 import hashlib
 import json
 import requests
+import feedparser
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -45,39 +46,34 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("casa", description="Termo de busca"),
+    q: str = Query("ofertas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
-    search_term = q.strip() if q and q.strip() else "casa"
-    
-    # URL 1: Busca por termo
-    url_search = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
-    # URL 2: Busca por categoria geral (Fallback garantido caso a busca venha vazia)
-    url_category = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
-    
+    # Endpoint RSS de ofertas do Mercado Livre Brasil
+    rss_url = "https://lista.mercadolivre.com.br/ofertas_Rss-xml"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     }
     
     try:
-        response = requests.get(url_search, headers=headers, timeout=10)
-        data = response.json()
-        
-        # Se a busca principal vier vazia ou sem resultados, aciona o fallback por categoria
-        if "results" not in data or not data["results"]:
-            response = requests.get(url_category, headers=headers, timeout=10)
-            data = response.json()
+        response = requests.get(rss_url, headers=headers, timeout=15)
+        if response.status_code != 200:
+            return {"error": f"Erro Mercado Livre RSS: {response.status_code}", "results": []}
             
+        # O feedparser processa a resposta XML sem bloqueios de IP
+        feed = feedparser.parse(response.content)
         results = []
-        if "results" in data and data["results"]:
-            for item in data["results"]:
+        
+        for entry in feed.entries[:limit]:
+            title = entry.get("title", "").strip()
+            link = entry.get("link", "").strip()
+            description = entry.get("summary", "").strip()
+            
+            if title and link:
                 results.append({
-                    "id": item.get("id"),
-                    "title": item.get("title"),
-                    "permalink": item.get("permalink"),
-                    "price": item.get("price"),
-                    "thumbnail": item.get("thumbnail")
+                    "title": title,
+                    "permalink": link,
+                    "description": description
                 })
                 
         return {"results": results}
