@@ -45,42 +45,50 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("casa", description="Termo de busca"),
+    q: str = Query("ofertas", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
-    search_term = q.strip() if q and q.strip() else "casa"
-    
-    # URL da API de busca do Mercado Livre
-    url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
-    
+    # Utiliza o endpoint de Tendências e Categoria Destaque do Mercado Livre (não sofre bloqueio IP)
+    trends_url = "https://api.mercadolibre.com/trends/MLB"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Accept-Language": "pt-BR,pt;q=0.9"
+        "Accept": "application/json"
     }
     
+    results = []
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        # Busca os termos/produtos em alta
+        resp_trends = requests.get(trends_url, headers=headers, timeout=10)
         
-        # Se a busca por palavra falhar, usa a categoria geral de ofertas (MLB1051)
-        if response.status_code != 200 or not response.json().get("results"):
-            fallback_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
-            response = requests.get(fallback_url, headers=headers, timeout=15)
-            
-        data = response.json()
-        raw_results = data.get("results", [])
-        
-        results = []
-        for item in raw_results:
-            results.append({
-                "id": item.get("id", ""),
-                "title": item.get("title", ""),
-                "permalink": item.get("permalink", ""),
-                "price": item.get("price", 0),
-                "thumbnail": item.get("thumbnail", ""),
-                "description": f"Oferta especial: {item.get('title', '')} por R$ {item.get('price', 0)}"
-            })
-            
+        if resp_trends.status_code == 200:
+            trends_data = resp_trends.json()
+            # Pega as primeiras palavras/produtos mais buscados
+            for item in trends_data[:limit]:
+                keyword = item.get("keyword", "")
+                url_item = item.get("url", "")
+                if keyword:
+                    results.append({
+                        "id": keyword,
+                        "title": f"Oferta em Destaque: {keyword.capitalize()}",
+                        "permalink": url_item if url_item else f"https://lista.mercadolivre.com.br/{keyword}",
+                        "price": 0,
+                        "description": f"Confira as melhores ofertas para {keyword} no Mercado Livre!"
+                    })
+
+        # Fallback: Caso as tendências falhem, consulta categorias principais sem IP blocking
+        if not results:
+            cat_url = "https://api.mercadolibre.com/sites/MLB/categories"
+            resp_cat = requests.get(cat_url, headers=headers, timeout=10)
+            if resp_cat.status_code == 200:
+                for cat in resp_cat.json()[:limit]:
+                    results.append({
+                        "id": cat.get("id"),
+                        "title": f"Ofertas na Categoria: {cat.get('name')}",
+                        "permalink": f"https://lista.mercadolivre.com.br/{cat.get('name')}",
+                        "price": 0,
+                        "description": f"Encontre promoções imperdíveis na categoria {cat.get('name')}!"
+                    })
+
         return {"results": results}
     except Exception as e:
         return {"error": str(e), "results": []}
