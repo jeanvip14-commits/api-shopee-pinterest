@@ -17,7 +17,7 @@ def generate_signature(payload_str, timestamp):
 
 @app.get("/")
 def home():
-    return {"status": "API Shopee a rodar de forma segura!"}
+    return {"status": "API Shopee e Mercado Livre a rodar de forma segura!"}
 
 @app.get("/shopee-offers")
 def get_shopee_offers(
@@ -44,3 +44,19 @@ def get_shopee_offers(
     
     response = requests.post(url, data=payload_json_compact, headers=headers)
     return response.json()
+
+# Nova rota criada para contornar o bloqueio de IP do Mercado Livre
+@app.get("/mercadolivre")
+def get_mercadolivre_offers(
+    q: str = Query("ofertas", description="Termo de busca"),
+    limit: int = Query(30, description="Quantidade de produtos (máx 50)")
+):
+    url = f"https://api.mercadolibre.com/sites/MLB/search?q={q}&limit={limit}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
