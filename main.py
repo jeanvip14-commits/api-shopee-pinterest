@@ -3,7 +3,6 @@ import time
 import hashlib
 import json
 import requests
-import feedparser
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -46,36 +45,42 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    q: str = Query("ofertas", description="Termo de busca"),
+    q: str = Query("casa", description="Termo de busca"),
     limit: int = Query(50, description="Quantidade de produtos")
 ):
-    # Endpoint RSS de ofertas do Mercado Livre Brasil
-    rss_url = "https://lista.mercadolivre.com.br/ofertas_Rss-xml"
+    search_term = q.strip() if q and q.strip() else "casa"
+    
+    # URL da API de busca do Mercado Livre
+    url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
+    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "pt-BR,pt;q=0.9"
     }
     
     try:
-        response = requests.get(rss_url, headers=headers, timeout=15)
-        if response.status_code != 200:
-            return {"error": f"Erro Mercado Livre RSS: {response.status_code}", "results": []}
-            
-        # O feedparser processa a resposta XML sem bloqueios de IP
-        feed = feedparser.parse(response.content)
-        results = []
+        response = requests.get(url, headers=headers, timeout=15)
         
-        for entry in feed.entries[:limit]:
-            title = entry.get("title", "").strip()
-            link = entry.get("link", "").strip()
-            description = entry.get("summary", "").strip()
+        # Se a busca por palavra falhar, usa a categoria geral de ofertas (MLB1051)
+        if response.status_code != 200 or not response.json().get("results"):
+            fallback_url = f"https://api.mercadolibre.com/sites/MLB/search?category=MLB1051&limit={limit}"
+            response = requests.get(fallback_url, headers=headers, timeout=15)
             
-            if title and link:
-                results.append({
-                    "title": title,
-                    "permalink": link,
-                    "description": description
-                })
-                
+        data = response.json()
+        raw_results = data.get("results", [])
+        
+        results = []
+        for item in raw_results:
+            results.append({
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "permalink": item.get("permalink", ""),
+                "price": item.get("price", 0),
+                "thumbnail": item.get("thumbnail", ""),
+                "description": f"Oferta especial: {item.get('title', '')} por R$ {item.get('price', 0)}"
+            })
+            
         return {"results": results}
     except Exception as e:
         return {"error": str(e), "results": []}
