@@ -3,7 +3,6 @@ import time
 import hashlib
 import json
 import requests
-from bs4 import BeautifulSoup
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -50,39 +49,30 @@ def get_mercadolivre_offers(
     limit: int = Query(50, description="Quantidade de produtos")
 ):
     search_term = q.strip() if q and q.strip() else "ofertas"
-    url = f"https://lista.mercadolivre.com.br/{search_term}"
+    # Consulta a API oficial com limite de itens
+    url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept": "application/json",
         "Accept-Language": "pt-BR,pt;q=0.9"
     }
     
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200:
-            return {"error": f"Erro Mercado Livre: {response.status_code}", "results": []}
-            
-        soup = BeautifulSoup(response.text, "html.parser")
+        data = response.json()
+        
         results = []
+        if "results" in data and data["results"]:
+            for item in data["results"]:
+                results.append({
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "permalink": item.get("permalink"),
+                    "price": item.get("price"),
+                    "thumbnail": item.get("thumbnail")
+                })
         
-        # Procura por elementos de produtos (seja lista clássica ou modelo novo)
-        items = soup.select("li.ui-search-layout__item, div.poly-card, div.ui-search-result__wrapper")
-        
-        for item in items[:limit]:
-            title_el = item.select_one("h2.ui-search-item__title, a.poly-component__title, h2")
-            link_el = item.select_one("a.ui-search-link, a.poly-component__title, a[href*='mercadolivre.com.br']")
-            
-            if title_el and link_el:
-                title = title_el.get_text(strip=True)
-                link = link_el.get("href", "")
-                
-                if link:
-                    results.append({
-                        "title": title,
-                        "permalink": link,
-                        "description": f"Confira {title} no Mercado Livre!"
-                    })
-                    
         return {"results": results}
     except Exception as e:
         return {"error": str(e), "results": []}
