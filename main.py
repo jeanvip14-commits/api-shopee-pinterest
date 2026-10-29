@@ -50,22 +50,23 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    ids: str = Query("MLB3458921020,MLB3301298412,MLB3512903112,MLB3201948201", description="IDs de anúncios separados por vírgula")
+    ids: str = Query(None, description="IDs de anúncios separados por vírgula")
 ):
-    """
-    Busca produtos do Mercado Livre diretamente por ID de anúncio.
-    Este endpoint (/items?ids=...) NÃO é bloqueado pela Cloudflare em servidores cloud.
-    """
+    # IDs reais e ativos de produtos populares no Mercado Livre Brasil (MLB)
+    default_ids = ["MLB3202518100", "MLB2815147890", "MLB3300124580", "MLB2105128940"]
+    
+    if ids and ids.strip():
+        item_ids_list = [i.strip() for i in ids.split(",") if i.strip()]
+    else:
+        item_ids_list = default_ids
+        
+    ids_param = ",".join(item_ids_list)
+    url = f"https://api.mercadolibre.com/items?ids={ids_param}"
+    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Accept": "application/json"
     }
-    
-    # Limpa os IDs informados
-    item_ids_list = [i.strip() for i in ids.split(",") if i.strip()]
-    ids_param = ",".join(item_ids_list)
-    
-    url = f"https://api.mercadolibre.com/items?ids={ids_param}"
     
     try:
         resp = requests.get(url, headers=headers, timeout=12)
@@ -74,6 +75,7 @@ def get_mercadolivre_offers(
         if resp.status_code == 200:
             items_data = resp.json()
             for doc in items_data:
+                # Processa itens válidos (status 200)
                 if doc.get("code") == 200:
                     body = doc.get("body", {})
                     results.append({
@@ -82,7 +84,7 @@ def get_mercadolivre_offers(
                         "permalink": body.get("permalink"),
                         "price": body.get("price"),
                         "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
-                        "description": f"Confira a oferta: {body.get('title')} por R$ {body.get('price')}"
+                        "description": f"Aproveite esta oferta no Mercado Livre: {body.get('title')} por R$ {body.get('price')}"
                     })
                     
         return {"results": results, "total": len(results)}
