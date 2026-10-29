@@ -11,9 +11,8 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Credenciais Mercado Livre
-MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
+# Chave ScraperAPI
+SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY", "").strip()
 
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
@@ -51,22 +50,21 @@ def get_shopee_offers(
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
     q: str = Query("ferramentas", description="Termo da busca"),
-    limit: int = Query(20, description="Quantidade de produtos")
+    limit: int = Query(50, description="Quantidade de produtos")
 ):
-    """
-    Busca produtos do catalogo oficial do Mercado Livre (MLB).
-    Usa o endpoint /products/search que nao e bloqueado em servidores cloud.
-    """
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json"
-    }
-    
     search_term = q.strip() if q and q.strip() else "ferramentas"
-    url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={search_term}&limit={limit}"
+    target_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
+    
+    if SCRAPER_API_KEY:
+        # Envia através do ScraperAPI para contornar a Cloudflare
+        url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}"
+    else:
+        url = target_url
+
+    headers = {"Accept": "application/json"}
     
     try:
-        resp = requests.get(url, headers=headers, timeout=12)
+        resp = requests.get(url, headers=headers, timeout=25)
         results = []
         
         if resp.status_code == 200:
@@ -74,24 +72,13 @@ def get_mercadolivre_offers(
             raw_results = data.get("results", [])
             
             for item in raw_results:
-                # Extrai foto do produto
-                pictures = item.get("pictures", [])
-                thumbnail = pictures[0].get("url") if pictures else ""
-                
-                # Extrai o menor preco ou preco medio do catalogo
-                buy_box = item.get("buy_box_winner", {})
-                price = buy_box.get("price") or item.get("price") or 0
-                
-                title = item.get("name") or item.get("title") or "Oferta Mercado Livre"
-                item_id = item.get("id")
-                
                 results.append({
-                    "id": item_id,
-                    "title": title,
-                    "permalink": f"https://www.mercadolivre.com.br/p/{item_id}",
-                    "price": price,
-                    "thumbnail": thumbnail,
-                    "description": f"Aproveite esta oferta no Mercado Livre: {title}!"
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "permalink": item.get("permalink"),
+                    "price": item.get("price"),
+                    "thumbnail": item.get("secure_thumbnail") or item.get("thumbnail"),
+                    "description": f"Confira esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
                 })
                 
         return {"results": results, "total": len(results)}
