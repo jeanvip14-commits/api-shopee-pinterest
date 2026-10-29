@@ -50,43 +50,50 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    ids: str = Query(None, description="IDs de anúncios separados por vírgula")
+    q: str = Query("ferramentas", description="Termo da busca"),
+    limit: int = Query(20, description="Quantidade de produtos")
 ):
-    # IDs reais e ativos de produtos populares no Mercado Livre Brasil (MLB)
-    default_ids = ["MLB3202518100", "MLB2815147890", "MLB3300124580", "MLB2105128940"]
-    
-    if ids and ids.strip():
-        item_ids_list = [i.strip() for i in ids.split(",") if i.strip()]
-    else:
-        item_ids_list = default_ids
-        
-    ids_param = ",".join(item_ids_list)
-    url = f"https://api.mercadolibre.com/items?ids={ids_param}"
-    
+    """
+    Busca produtos do catalogo oficial do Mercado Livre (MLB).
+    Usa o endpoint /products/search que nao e bloqueado em servidores cloud.
+    """
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "application/json"
     }
+    
+    search_term = q.strip() if q and q.strip() else "ferramentas"
+    url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={search_term}&limit={limit}"
     
     try:
         resp = requests.get(url, headers=headers, timeout=12)
         results = []
         
         if resp.status_code == 200:
-            items_data = resp.json()
-            for doc in items_data:
-                # Processa itens válidos (status 200)
-                if doc.get("code") == 200:
-                    body = doc.get("body", {})
-                    results.append({
-                        "id": body.get("id"),
-                        "title": body.get("title"),
-                        "permalink": body.get("permalink"),
-                        "price": body.get("price"),
-                        "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
-                        "description": f"Aproveite esta oferta no Mercado Livre: {body.get('title')} por R$ {body.get('price')}"
-                    })
-                    
+            data = resp.json()
+            raw_results = data.get("results", [])
+            
+            for item in raw_results:
+                # Extrai foto do produto
+                pictures = item.get("pictures", [])
+                thumbnail = pictures[0].get("url") if pictures else ""
+                
+                # Extrai o menor preco ou preco medio do catalogo
+                buy_box = item.get("buy_box_winner", {})
+                price = buy_box.get("price") or item.get("price") or 0
+                
+                title = item.get("name") or item.get("title") or "Oferta Mercado Livre"
+                item_id = item.get("id")
+                
+                results.append({
+                    "id": item_id,
+                    "title": title,
+                    "permalink": f"https://www.mercadolivre.com.br/p/{item_id}",
+                    "price": price,
+                    "thumbnail": thumbnail,
+                    "description": f"Aproveite esta oferta no Mercado Livre: {title}!"
+                })
+                
         return {"results": results, "total": len(results)}
     except Exception as e:
         return {"error": str(e), "results": []}
