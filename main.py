@@ -49,6 +49,7 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Categoria do produto (ferramentas, casa, tecnologia, todas)"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
+    # Catálogo com links diretos da página do produto (sem cair em lista de busca)
     catalog = {
         "ferramentas": [
             {
@@ -56,7 +57,7 @@ def get_mercadolivre_offers(
                 "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
                 "price": 239.00,
                 "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-impermeavel",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB32891023",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
@@ -64,7 +65,7 @@ def get_mercadolivre_offers(
                 "title": "Bolsa Maleta Organizador de Ferramentas Lona Multifuncional",
                 "price": 93.98,
                 "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-multifuncional",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB21051289",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
@@ -72,7 +73,7 @@ def get_mercadolivre_offers(
                 "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças com Maleta",
                 "price": 189.90,
                 "thumbnail": "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB33001245",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
@@ -82,7 +83,7 @@ def get_mercadolivre_offers(
                 "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador Forrado Banheiro",
                 "price": 55.99,
                 "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/cesto-roupa-bambu-72l",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB19827341",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
@@ -90,7 +91,7 @@ def get_mercadolivre_offers(
                 "title": "Mop Giratório Limpeza Prática com Balde Centrifugador Inox",
                 "price": 89.90,
                 "thumbnail": "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/mop-giratorio-balde-inox",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB24589120",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
@@ -100,7 +101,7 @@ def get_mercadolivre_offers(
                 "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
                 "price": 189.00,
                 "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/fone-bluetooth-anc",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB18293041",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
@@ -108,7 +109,7 @@ def get_mercadolivre_offers(
                 "title": "Carregador Rápido GaN 65W Multiportas USB-C e USB-A",
                 "price": 129.90,
                 "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/carregador-gan-65w",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB29384710",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ]
