@@ -50,20 +50,22 @@ def get_shopee_offers(
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
     q: str = Query("ferramentas", description="Termo da busca"),
-    limit: int = Query(50, description="Quantidade de produtos")
+    limit: int = Query(50, description="Quantidade de produtos"),
+    api_key: str = Query(None, description="Chave ScraperAPI opcional")
 ):
     search_term = q.strip() if q and q.strip() else "ferramentas"
     target_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
-    if SCRAPER_API_KEY:
-        url = f"https://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}&render=false"
-    else:
-        url = target_url
-
-    headers = {"Accept": "application/json"}
+    # Usa a chave passada no parametro ou a chave do Render
+    active_key = api_key or SCRAPER_API_KEY
     
+    if not active_key:
+        return {"error": "SCRAPER_API_KEY nao configurada no Render!", "results": []}
+        
+    proxy_url = f"http://api.scraperapi.com?api_key={active_key}&url={target_url}&country_code=br"
+
     try:
-        resp = requests.get(url, headers=headers, timeout=60)
+        resp = requests.get(proxy_url, timeout=45)
         results = []
         
         if resp.status_code == 200:
