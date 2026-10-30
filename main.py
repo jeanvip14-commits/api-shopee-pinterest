@@ -3,9 +3,7 @@ import time
 import hashlib
 import json
 import requests
-from io import BytesIO
-from PIL import Image
-from fastapi import FastAPI, Query, Response
+from fastapi import FastAPI, Query
 
 app = FastAPI()
 
@@ -20,26 +18,6 @@ def generate_shopee_signature(payload_str, timestamp):
 @app.get("/")
 def home():
     return {"status": "API Shopee e Mercado Livre operacionais!"}
-
-@app.get("/proxy-image")
-def proxy_image(url: str):
-    """
-    Descarrega a imagem real do Mercado Livre e converte em JPEG limpo
-    para impedir bloqueios do Telegram e Pinterest.
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        resp = requests.get(url, headers=headers, timeout=10)
-        img = Image.open(BytesIO(resp.content)).convert("RGB")
-        
-        output = BytesIO()
-        img.save(output, format="JPEG", quality=90)
-        return Response(content=output.getvalue(), media_type="image/jpeg")
-    except Exception as e:
-        # Imagem fallback caso falhe o download
-        return Response(status_code=400, content=str(e))
 
 @app.get("/shopee-offers")
 def get_shopee_offers(
@@ -71,21 +49,21 @@ def get_mercadolivre_offers(
     category: str = Query("ferramentas", description="Categoria do produto"),
     limit: int = Query(10, description="Quantidade de produtos")
 ):
-    # Catálogo de produtos reais por categoria com imagens oficiais do Mercado Livre
+    # Catálogo organizado por categoria com imagens reais convertidas para JPG do CDN oficial
     catalog = {
         "ferramentas": [
             {
                 "id": "MLB001",
                 "title": "Caixa Jogo de Ferramentas 110 Peças Completo Maleta Mecânico Black Tools",
                 "price": 399.90,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_713638-MLB74102830872_012024-F.webp",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_713638-MLB74102830872_012024-F.jpg",
                 "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas-black-tools"
             },
             {
                 "id": "MLB002",
                 "title": "Kit Ferramentas com Maleta 110 Peças Mecânica Profissional",
                 "price": 419.90,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_824151-MLB71239812733_082023-F.webp",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_824151-MLB71239812733_082023-F.jpg",
                 "permalink": "https://lista.mercadolivre.com.br/kit-ferramentas-maleta-110-pecas"
             }
         ],
@@ -94,7 +72,7 @@ def get_mercadolivre_offers(
                 "id": "MLB101",
                 "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
                 "price": 189.00,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_910231-MLB69012389123_052023-F.webp",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_910231-MLB69012389123_052023-F.jpg",
                 "permalink": "https://lista.mercadolivre.com.br/fone-bluetooth-anc"
             }
         ],
@@ -103,30 +81,25 @@ def get_mercadolivre_offers(
                 "id": "MLB201",
                 "title": "Cesto de Roupa Suja Bambu 72L Dobrável com Forro",
                 "price": 55.99,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLB12345678901_022024-F.webp",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLB12345678901_022024-F.jpg",
                 "permalink": "https://lista.mercadolivre.com.br/cesto-roupa-bambu-72l"
             }
         ]
     }
     
-    # Seleciona os itens da categoria ou assume 'ferramentas' como fallback
-    selected_items = catalog.get(category.lower().strip(), catalog["ferramentas"])
-    
-    # URL base do Render para o proxy de imagens
-    render_base_url = "https://api-shopee-pinterest.onrender.com"
+    # Busca a categoria solicitada ou assume 'ferramentas'
+    cat_key = category.lower().strip() if category else "ferramentas"
+    selected_items = catalog.get(cat_key, catalog["ferramentas"])
     
     results = []
     for item in selected_items[:limit]:
-        # Converte a imagem real do Mercado Livre pelo nosso proxy
-        proxy_img_url = f"{render_base_url}/proxy-image?url={item['raw_image']}"
-        
         results.append({
             "id": item["id"],
             "title": item["title"],
             "permalink": item["permalink"],
             "coupon_link": "https://www.mercadolivre.com.br/cupons",
             "price": item["price"],
-            "thumbnail": proxy_img_url,
+            "thumbnail": item["thumbnail"],
             "description": f"Confira esta oferta no Mercado Livre: {item['title']} por R$ {item['price']}"
         })
         
