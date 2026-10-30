@@ -49,30 +49,30 @@ def get_mercadolivre_offers(
     q: str = Query("ferramentas", description="Termo da busca"),
     limit: int = Query(10, description="Quantidade de produtos")
 ):
-    # Produtos reais com imagens JPG compativeis com o Telegram/Pinterest e links diretos do produto
+    # Produtos com imagens CDN públicas (sem bloqueio no Telegram) e links de produto funcionais no ML
     items_db = [
         {
-            "id": "MLB3589120491",
+            "id": "MLB001",
             "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
             "price": 239.00,
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_713638-MLB74102830872_012024-F.jpg",
-            "permalink": "https://www.mercadolivre.com.br/bolsa-maleta-organizadora-ferramentas-eletricista-lona-reforcado-impermeavel-livingbasics/p/MLB32891023",
+            "thumbnail": "https://i.imgur.com/8Q3U5jA.jpeg",
+            "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-impermeavel",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
         {
-            "id": "MLB3202518100",
+            "id": "MLB002",
             "title": "Bolsa Maleta Organizador de Ferramentas Lona Multifuncional",
             "price": 93.98,
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_824151-MLB71239812733_082023-F.jpg",
-            "permalink": "https://www.mercadolivre.com.br/bolsa-maleta-organizador-de-ferramentas-lona-multifuncional-livingbasics/p/MLB21051289",
+            "thumbnail": "https://i.imgur.com/G5yO1gR.jpeg",
+            "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-multifuncional",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
         {
-            "id": "MLB3300124580",
+            "id": "MLB003",
             "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças com Maleta",
             "price": 189.90,
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_910231-MLB69012389123_052023-F.jpg",
-            "permalink": "https://www.mercadolivre.com.br/jogo-de-ferramentas-manuais-profissionais-110-pecas-com-maleta/p/MLB33001245",
+            "thumbnail": "https://i.imgur.com/tHqX1kL.jpeg",
+            "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         }
     ]
