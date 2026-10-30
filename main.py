@@ -2,6 +2,7 @@ import os
 import time
 import hashlib
 import json
+import random
 import requests
 from fastapi import FastAPI, Query
 
@@ -49,7 +50,7 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Categoria do produto (ferramentas, casa, tecnologia, todas)"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Catálogo rico com preços De/Por, cupons e links diretos do Mercado Livre
+    # Catálogo expandido de produtos para o sorteio dinâmico
     catalog = {
         "ferramentas": [
             {
@@ -140,13 +141,20 @@ def get_mercadolivre_offers(
     selected_items = []
     
     if cat_key in ["todas", "mix", "all"]:
-        max_per_cat = max(1, limit // len(catalog))
+        # Junta todos os produtos de todas as categorias e baralha aleatoriamente
+        all_products = []
         for key in catalog:
-            selected_items.extend(catalog[key][:max_per_cat])
+            all_products.extend(catalog[key])
+        random.shuffle(all_products)
+        selected_items = all_products
     elif cat_key in catalog:
-        selected_items = catalog[cat_key]
+        cat_list = list(catalog[cat_key])
+        random.shuffle(cat_list)
+        selected_items = cat_list
     else:
-        selected_items = catalog["ferramentas"]
+        cat_list = list(catalog["ferramentas"])
+        random.shuffle(cat_list)
+        selected_items = cat_list
         
     results = []
     for item in selected_items[:limit]:
