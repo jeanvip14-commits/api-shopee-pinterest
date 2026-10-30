@@ -51,28 +51,30 @@ def get_mercadolivre_offers(
 ):
     search_term = q.strip() if q and q.strip() else "ferramentas"
     
-    # Produtos com links diretos de anúncios e imagens .jpg válidas para o Telegram/Pinterest
     items_db = [
         {
-            "id": "MLB3589120491",
+            "id": "MLB001",
             "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças",
             "price": 189.90,
             "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=800&auto=format&fit=crop&q=80",
-            "permalink": "https://www.mercadolivre.com.br/p/MLB28151478"
+            "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas",
+            "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
         {
-            "id": "MLB3202518100",
+            "id": "MLB002",
             "title": "Kit Furadeira e Parafusadeira Impacto Bateria Lítio 21V",
             "price": 259.00,
             "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&auto=format&fit=crop&q=80",
-            "permalink": "https://www.mercadolivre.com.br/p/MLB21051289"
+            "permalink": "https://lista.mercadolivre.com.br/parafusadeira-furadeira-21v",
+            "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
         {
-            "id": "MLB3300124580",
+            "id": "MLB003",
             "title": "Maleta Organizadora Multiuso com Chaves e Soquetes",
             "price": 129.50,
             "thumbnail": "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=800&auto=format&fit=crop&q=80",
-            "permalink": "https://www.mercadolivre.com.br/p/MLB33001245"
+            "permalink": "https://lista.mercadolivre.com.br/maleta-organizadora-ferramentas",
+            "coupon_link": "https://www.mercadolivre.com.br/cupons"
         }
     ]
     
@@ -82,6 +84,7 @@ def get_mercadolivre_offers(
             "id": item["id"],
             "title": item["title"],
             "permalink": item["permalink"],
+            "coupon_link": item["coupon_link"],
             "price": item["price"],
             "thumbnail": item["thumbnail"],
             "description": f"Confira esta oferta no Mercado Livre: {item['title']} por R$ {item['price']}"
