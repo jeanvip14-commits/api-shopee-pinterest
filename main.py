@@ -49,13 +49,13 @@ def get_mercadolivre_offers(
     q: str = Query("ferramentas", description="Termo da busca"),
     limit: int = Query(10, description="Quantidade de produtos")
 ):
-    # Produtos com imagens CDN públicas (sem bloqueio no Telegram) e links de produto funcionais no ML
+    # Imagens hospedadas em CDN livre (Unsplash) com links diretos de busca do Mercado Livre
     items_db = [
         {
             "id": "MLB001",
             "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
             "price": 239.00,
-            "thumbnail": "https://i.imgur.com/8Q3U5jA.jpeg",
+            "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=1000&auto=format&fit=crop&q=80.jpg",
             "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-impermeavel",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
@@ -63,7 +63,7 @@ def get_mercadolivre_offers(
             "id": "MLB002",
             "title": "Bolsa Maleta Organizador de Ferramentas Lona Multifuncional",
             "price": 93.98,
-            "thumbnail": "https://i.imgur.com/G5yO1gR.jpeg",
+            "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1000&auto=format&fit=crop&q=80.jpg",
             "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-multifuncional",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         },
@@ -71,7 +71,7 @@ def get_mercadolivre_offers(
             "id": "MLB003",
             "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças com Maleta",
             "price": 189.90,
-            "thumbnail": "https://i.imgur.com/tHqX1kL.jpeg",
+            "thumbnail": "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=1000&auto=format&fit=crop&q=80.jpg",
             "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas",
             "coupon_link": "https://www.mercadolivre.com.br/cupons"
         }
