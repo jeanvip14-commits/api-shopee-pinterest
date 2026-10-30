@@ -46,46 +46,41 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    ids: str = Query("MLB3202518100,MLB2815147890,MLB3300124580,MLB2105128940", description="IDs de anúncios separados por vírgula")
+    ids: str = Query(None, description="IDs de anúncios separados por vírgula")
 ):
     """
-    Busca detalhes diretos de anúncios ativos no Mercado Livre Brasil.
-    Este endpoint (/items?ids=...) é 100% livre de bloqueios da Cloudflare.
+    Consulta os detalhes de cada anúncio individualmente no Mercado Livre.
+    Se um ID for inválido, não invalida os restantes.
     """
-    # Lista de IDs padrão de produtos populares caso nenhum seja passado
-    default_ids = ["MLB3202518100", "MLB2815147890", "MLB3300124580", "MLB2105128940"]
+    default_ids = ["MLB3589120491", "MLB3202518100", "MLB3300124580"]
     
     if ids and ids.strip():
         raw_ids = [i.strip() for i in ids.split(",") if i.strip()]
     else:
         raw_ids = default_ids
         
-    ids_param = ",".join(raw_ids[:20]) # Suporta até 20 anúncios por chamada
-    url = f"https://api.mercadolibre.com/items?ids={ids_param}"
-    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "application/json"
     }
     
-    try:
-        resp = requests.get(url, headers=headers, timeout=12)
-        results = []
-        
-        if resp.status_code == 200:
-            data = resp.json()
-            for doc in data:
-                if doc.get("code") == 200:
-                    body = doc.get("body", {})
-                    results.append({
-                        "id": body.get("id"),
-                        "title": body.get("title"),
-                        "permalink": body.get("permalink"),
-                        "price": body.get("price"),
-                        "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
-                        "description": f"Confira esta oferta no Mercado Livre: {body.get('title')} por R$ {body.get('price')}"
-                    })
-                    
-        return {"results": results, "total": len(results)}
-    except Exception as e:
-        return {"error": str(e), "results": [], "total": 0}
+    results = []
+    
+    for item_id in raw_ids[:10]:
+        url = f"https://api.mercadolibre.com/items/{item_id}"
+        try:
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                body = resp.json()
+                results.append({
+                    "id": body.get("id"),
+                    "title": body.get("title"),
+                    "permalink": body.get("permalink"),
+                    "price": body.get("price"),
+                    "thumbnail": body.get("secure_thumbnail") or body.get("thumbnail"),
+                    "description": f"Confira esta oferta no Mercado Livre: {body.get('title')} por R$ {body.get('price')}"
+                })
+        except Exception:
+            continue
+            
+    return {"results": results, "total": len(results)}
