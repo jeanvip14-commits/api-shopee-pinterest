@@ -49,31 +49,40 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Categoria do produto (ferramentas, casa, tecnologia, todas)"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Catálogo com links de busca estruturados oficiais do Mercado Livre (nunca dão erro 404)
+    # Catálogo rico com preços De/Por, cupons e links diretos do Mercado Livre
     catalog = {
         "ferramentas": [
             {
                 "id": "MLB001",
                 "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
+                "original_price": 319.90,
                 "price": 239.00,
+                "discount": "25%",
+                "coupon": "MELISUPERCLUB",
                 "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-impermeavel",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB002",
                 "title": "Bolsa Maleta Organizador de Ferramentas Lona Multifuncional",
+                "original_price": 149.90,
                 "price": 93.98,
+                "discount": "37%",
+                "coupon": "CUPOMMELE",
                 "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/bolsa-maleta-ferramentas-multifuncional",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB003",
                 "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças com Maleta",
+                "original_price": 259.90,
                 "price": 189.90,
+                "discount": "27%",
+                "coupon": "OFERTAMELI",
                 "thumbnail": "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
@@ -81,17 +90,23 @@ def get_mercadolivre_offers(
             {
                 "id": "MLB101",
                 "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador Forrado Banheiro",
+                "original_price": 99.99,
                 "price": 55.99,
+                "discount": "44%",
+                "coupon": "MELISUPERCLUB",
                 "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/cesto-roupa-bambu-72l",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB102",
                 "title": "Mop Giratório Limpeza Prática com Balde Centrifugador Inox",
+                "original_price": 159.90,
                 "price": 89.90,
+                "discount": "43%",
+                "coupon": "CASACOMDESC",
                 "thumbnail": "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/mop-giratorio-balde-inox",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
@@ -99,17 +114,23 @@ def get_mercadolivre_offers(
             {
                 "id": "MLB201",
                 "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
+                "original_price": 299.00,
                 "price": 189.00,
+                "discount": "37%",
+                "coupon": "TECHMELI",
                 "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/fone-bluetooth-anc",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB202",
                 "title": "Carregador Rápido GaN 65W Multiportas USB-C e USB-A",
+                "original_price": 199.90,
                 "price": 129.90,
+                "discount": "35%",
+                "coupon": "MELISUPERCLUB",
                 "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=1000&auto=format&fit=crop&q=80",
-                "permalink": "https://lista.mercadolivre.com.br/carregador-gan-65w",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD",
                 "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ]
@@ -134,9 +155,12 @@ def get_mercadolivre_offers(
             "title": item["title"],
             "permalink": item["permalink"],
             "coupon_link": item["coupon_link"],
+            "original_price": item["original_price"],
             "price": item["price"],
+            "discount": item["discount"],
+            "coupon": item["coupon"],
             "thumbnail": item["thumbnail"],
-            "description": f"Confira esta oferta no Mercado Livre: {item['title']} por R$ {item['price']}"
+            "description": f"Aproveite esta super oferta: {item['title']}"
         })
         
     return {"results": results, "total": len(results)}
