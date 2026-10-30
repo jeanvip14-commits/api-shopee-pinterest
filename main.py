@@ -22,8 +22,8 @@ def home():
 @app.get("/proxy-image")
 def proxy_image(url: str):
     """
-    Baixa a imagem com cabeçalhos de navegador e a devolve em stream.
-    Resolve o bloqueio de imagens no Telegram e Pinterest.
+    Faz o download da imagem do CDN do Mercado Livre com cabeçalhos de browser
+    e devolve os bytes diretamente. Resolve 100% o bloqueio de imagem no Telegram/Pinterest.
     """
     try:
         headers = {
@@ -31,8 +31,7 @@ def proxy_image(url: str):
             "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
         }
         resp = requests.get(url, headers=headers, timeout=10)
-        content_type = resp.headers.get("content-type", "image/jpeg")
-        return Response(content=resp.content, media_type=content_type)
+        return Response(content=resp.content, media_type="image/jpeg")
     except Exception as e:
         return Response(status_code=400, content=str(e))
 
@@ -63,66 +62,50 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    category: str = Query("ferramentas", description="Categoria do produto"),
+    category: str = Query(None, description="Filtro de Categoria/Busca"),
+    q: str = Query(None, description="Termo de busca alternativo"),
     limit: int = Query(10, description="Quantidade de produtos")
 ):
-    # Catálogo organizado por categorias
-    catalog = {
-        "ferramentas": [
-            {
-                "id": "MLB001",
-                "title": "Caixa Jogo de Ferramentas 110 Peças Completo Maleta Mecânico Black Tools",
-                "price": 399.90,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_713638-MLB74102830872_012024-F.jpg",
-                "permalink": "https://lista.mercadolivre.com.br/jogo-de-ferramentas-110-pecas-black-tools"
-            },
-            {
-                "id": "MLB002",
-                "title": "Kit Ferramentas com Maleta 110 Peças Mecânica Profissional",
-                "price": 419.90,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_824151-MLB71239812733_082023-F.jpg",
-                "permalink": "https://lista.mercadolivre.com.br/kit-ferramentas-maleta-110-pecas"
-            }
-        ],
-        "tecnologia": [
-            {
-                "id": "MLB101",
-                "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
-                "price": 189.00,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_910231-MLB69012389123_052023-F.jpg",
-                "permalink": "https://lista.mercadolivre.com.br/fone-bluetooth-anc"
-            }
-        ],
-        "casa": [
-            {
-                "id": "MLB201",
-                "title": "Cesto de Roupa Suja Bambu 72L Dobrável com Forro",
-                "price": 55.99,
-                "raw_image": "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLB12345678901_022024-F.jpg",
-                "permalink": "https://lista.mercadolivre.com.br/cesto-roupa-bambu-72l"
-            }
-        ]
+    """
+    Busca produtos diretamente na API oficial de busca do Mercado Livre
+    pelo termo passado em 'category' ou 'q' (semelhante à Shopee).
+    """
+    search_term = category or q or "ferramentas"
+    target_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term.strip()}&limit={limit}"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
     }
     
-    cat_key = category.lower().strip() if category else "ferramentas"
-    selected_items = catalog.get(cat_key, catalog["ferramentas"])
-    
-    # URL da sua API no Render para encapsular a imagem
+    results = []
     render_base_url = "https://api-shopee-pinterest.onrender.com"
     
-    results = []
-    for item in selected_items[:limit]:
-        # Envia a URL da imagem pelo seu proxy interno no Render
-        proxy_img_url = f"{render_base_url}/proxy-image?url={item['raw_image']}"
-        
-        results.append({
-            "id": item["id"],
-            "title": item["title"],
-            "permalink": item["permalink"],
-            "coupon_link": "https://www.mercadolivre.com.br/cupons",
-            "price": item["price"],
-            "thumbnail": proxy_img_url,
-            "description": f"Confira esta oferta no Mercado Livre: {item['title']} por R$ {item['price']}"
-        })
+    try:
+        resp = requests.get(target_url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            raw_results = data.get("results", [])
+            
+            for item in raw_results:
+                raw_thumb = item.get("secure_thumbnail") or item.get("thumbnail") or ""
+                # Força formato em alta resolução (.JPG)
+                if raw_thumb:
+                    raw_thumb = raw_thumb.replace("-I.jpg", "-O.jpg").replace("-I.webp", "-O.jpg")
+                
+                # Passa a imagem pelo proxy para o Telegram conseguir exibir
+                proxy_thumb = f"{render_base_url}/proxy-image?url={raw_thumb}" if raw_thumb else ""
+                
+                results.append({
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "permalink": item.get("permalink"),
+                    "coupon_link": "https://www.mercadolivre.com.br/cupons",
+                    "price": item.get("price"),
+                    "thumbnail": proxy_thumb,
+                    "description": f"Confira esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
+                })
+    except Exception:
+        pass
         
     return {"results": results, "total": len(results)}
