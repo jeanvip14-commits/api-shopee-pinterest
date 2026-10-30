@@ -11,7 +11,7 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Chave ScraperAPI
+# Chave ScraperAPI configurada nas Environment Variables do Render
 SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY", "").strip()
 
 def generate_shopee_signature(payload_str, timestamp):
@@ -56,32 +56,41 @@ def get_mercadolivre_offers(
     search_term = q.strip() if q and q.strip() else "ferramentas"
     target_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit={limit}"
     
-    # Usa a chave passada no parametro ou a chave do Render
     active_key = api_key or SCRAPER_API_KEY
     
-    if not active_key:
-        return {"error": "SCRAPER_API_KEY nao configurada no Render!", "results": []}
+    if not active_key or active_key == "SUA_CHAVE_SCRAPERAPI":
+        return {
+            "error": "Chave do ScraperAPI invalida ou nao configurada! Cole a sua chave real do ScraperAPI.",
+            "results": [],
+            "total": 0
+        }
         
-    proxy_url = f"http://api.scraperapi.com?api_key={active_key}&url={target_url}&country_code=br"
+    proxy_url = f"https://api.scraperapi.com?api_key={active_key}&url={target_url}&country_code=br&render=false"
 
     try:
-        resp = requests.get(proxy_url, timeout=45)
+        resp = requests.get(proxy_url, timeout=60)
+        
+        if resp.status_code != 200:
+            return {
+                "error": f"ScraperAPI retornou o status {resp.status_code}: {resp.text}",
+                "results": [],
+                "total": 0
+            }
+            
+        data = resp.json()
+        raw_results = data.get("results", [])
         results = []
         
-        if resp.status_code == 200:
-            data = resp.json()
-            raw_results = data.get("results", [])
+        for item in raw_results:
+            results.append({
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "permalink": item.get("permalink"),
+                "price": item.get("price"),
+                "thumbnail": item.get("secure_thumbnail") or item.get("thumbnail"),
+                "description": f"Confira esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
+            })
             
-            for item in raw_results:
-                results.append({
-                    "id": item.get("id"),
-                    "title": item.get("title"),
-                    "permalink": item.get("permalink"),
-                    "price": item.get("price"),
-                    "thumbnail": item.get("secure_thumbnail") or item.get("thumbnail"),
-                    "description": f"Confira esta oferta no Mercado Livre: {item.get('title')} por R$ {item.get('price')}"
-                })
-                
         return {"results": results, "total": len(results)}
     except Exception as e:
-        return {"error": str(e), "results": []}
+        return {"error": str(e), "results": [], "total": 0}
