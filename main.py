@@ -85,4 +85,30 @@ def get_mercadolivre_offers(
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         
-        discount_pct = int(((original_price - price) / original_price) * 1
+        # Cálculo de desconto corrigido e com parênteses fechados
+        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
+        
+        # Ajusta a imagem para HTTPS e alta resolução
+        thumbnail = item.get("thumbnail", "").replace("http://", "https://")
+        if "-I.jpg" in thumbnail:
+            thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
+        elif "-I.webp" in thumbnail:
+            thumbnail = thumbnail.replace("-I.webp", "-O.webp")
+
+        # Puxa a URL dinâmica real do produto no Mercado Livre
+        permalink = item.get("permalink", "")
+
+        results.append({
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "permalink": permalink,
+            "coupon_link": "https://www.mercadolivre.com.br/cupons",
+            "original_price": round(original_price, 2),
+            "price": round(price, 2),
+            "discount": f"{discount_pct}%",
+            "coupon": "OFERTAMELI",
+            "thumbnail": thumbnail,
+            "description": f"Aproveite esta super oferta: {item.get('title')}"
+        })
+
+    return {"results": results, "total": len(results)}
