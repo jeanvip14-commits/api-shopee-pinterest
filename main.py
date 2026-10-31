@@ -12,9 +12,31 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
+# Credenciais Mercado Livre
+MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
+
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
+
+def get_meli_token():
+    if not MELI_APP_ID or not MELI_CLIENT_SECRET:
+        return None
+    url = "https://api.mercadolibre.com/oauth/token"
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": MELI_APP_ID,
+        "client_secret": MELI_CLIENT_SECRET
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    try:
+        resp = requests.post(url, data=payload, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            return resp.json().get("access_token")
+    except Exception:
+        pass
+    return None
 
 @app.get("/")
 def home():
@@ -55,42 +77,35 @@ def get_mercadolivre_offers(
         search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "utilidades", "audio", "games"]
         search_term = random.choice(search_terms)
 
-    # Consulta direta à API do Mercado Livre Brasil com filtros de busca dinâmica
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&sort=relevance"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json"
-    }
+    token = get_meli_token()
+    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
     
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
     raw_results = []
     try:
-        resp = requests.get(search_url, headers=headers, timeout=10)
+        resp = requests.get(search_url, headers=headers, timeout=8)
         if resp.status_code == 200:
             data = resp.json()
             raw_results = data.get("results", [])
     except Exception:
         raw_results = []
 
-    # Caso a busca retorne vazia, tenta uma rota secundária de itens em alta
     if not raw_results:
-        try:
-            fallback_url = "https://api.mercadolibre.com/sites/MLB/search?q=promocao"
-            resp = requests.get(fallback_url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                raw_results = resp.json().get("results", [])
-        except Exception:
-            raw_results = []
+        return {"results": [], "total": 0}
 
     random.shuffle(raw_results)
 
     results = []
     for item in raw_results[:limit]:
         price = item.get("price", 0.0)
-        original_price = item.get("original_price") or (price * 1.22)
+        original_price = item.get("original_price") or (price * 1.25)
+        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
         
-        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 18
-        
-        # Ajusta a URL da imagem para HTTPS e alta definição
         thumbnail = item.get("thumbnail", "").replace("http://", "https://")
         if "-I.jpg" in thumbnail:
             thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
