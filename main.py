@@ -55,20 +55,26 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Trata a palavra "todas" para buscar termos com alto volume de produtos reais
+    # Trata a palavra "todas" para buscar termos com alto volume
     search_term = category.lower().strip()
     if search_term in ["todas", "mix", "all", ""]:
         search_terms = ["ofertas", "promocao", "tecnologia", "ferramentas", "casa"]
         search_term = random.choice(search_terms)
 
-    # Busca dinâmica automatizada na API pública do Mercado Livre Brasil
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
+    target_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
+    
+    # Se a SCRAPER_API_KEY estiver configurada, passa pela ScraperAPI para contornar bloqueios do Render
+    if SCRAPER_API_KEY:
+        search_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}"
+    else:
+        search_url = target_url
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     
     try:
-        resp = requests.get(search_url, headers=headers, timeout=10)
+        resp = requests.get(search_url, headers=headers, timeout=15)
         data = resp.json()
         raw_results = data.get("results", [])
     except Exception as e:
@@ -77,7 +83,7 @@ def get_mercadolivre_offers(
     if not raw_results:
         return {"results": [], "total": 0}
 
-    # Embaralha os produtos retornados para ter variabilidade
+    # Embaralha os produtos para mudar a cada execução
     random.shuffle(raw_results)
 
     results = []
@@ -85,17 +91,15 @@ def get_mercadolivre_offers(
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         
-        # Cálculo de desconto corrigido e com parênteses fechados
         discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
         
-        # Ajusta a imagem para HTTPS e alta resolução
+        # Ajusta a imagem para HTTPS e alta resolução (compatível com Pinterest)
         thumbnail = item.get("thumbnail", "").replace("http://", "https://")
         if "-I.jpg" in thumbnail:
             thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-        # Puxa a URL dinâmica real do produto no Mercado Livre
         permalink = item.get("permalink", "")
 
         results.append({
