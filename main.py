@@ -52,11 +52,17 @@ def get_shopee_offers(
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
-    category: str = Query("ofertas", description="Termo de busca ou categoria"),
+    category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Busca dinâmica automatizada via API oficial do Mercado Livre Brasil
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={category}&limit=50"
+    # Trata a palavra "todas" para buscar termos com alto volume de produtos reais
+    search_term = category.lower().strip()
+    if search_term in ["todas", "mix", "all", ""]:
+        search_terms = ["ofertas", "promocao", "tecnologia", "ferramentas", "casa"]
+        search_term = random.choice(search_terms)
+
+    # Busca dinâmica automatizada na API pública do Mercado Livre Brasil
+    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
@@ -71,7 +77,7 @@ def get_mercadolivre_offers(
     if not raw_results:
         return {"results": [], "total": 0}
 
-    # Embaralha a lista recebida para que cada execução do Make traga produtos diferentes
+    # Embaralha os produtos retornados para ter variabilidade
     random.shuffle(raw_results)
 
     results = []
@@ -79,29 +85,4 @@ def get_mercadolivre_offers(
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         
-        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
-        
-        # Ajusta a URL da imagem para HTTPS e alta resolução (compatível com Pinterest)
-        thumbnail = item.get("thumbnail", "").replace("http://", "https://")
-        if "-I.jpg" in thumbnail:
-            thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
-        elif "-I.webp" in thumbnail:
-            thumbnail = thumbnail.replace("-I.webp", "-O.webp")
-
-        # Puxa a URL dinâmica real do produto no Mercado Livre
-        permalink = item.get("permalink", "")
-
-        results.append({
-            "id": item.get("id"),
-            "title": item.get("title"),
-            "permalink": permalink,
-            "coupon_link": "https://www.mercadolivre.com.br/cupons",
-            "original_price": round(original_price, 2),
-            "price": round(price, 2),
-            "discount": f"{discount_pct}%",
-            "coupon": "OFERTAMELI",
-            "thumbnail": thumbnail,
-            "description": f"Aproveite esta super oferta: {item.get('title')}"
-        })
-
-    return {"results": results, "total": len(results)}
+        discount_pct = int(((original_price - price) / original_price) * 1
