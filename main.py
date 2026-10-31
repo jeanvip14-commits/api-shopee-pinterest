@@ -12,31 +12,9 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Credenciais Mercado Livre
-MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
-
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
-
-def get_meli_token():
-    if not MELI_APP_ID or not MELI_CLIENT_SECRET:
-        return None
-    url = "https://api.mercadolibre.com/oauth/token"
-    payload = {
-        "grant_type": "client_credentials",
-        "client_id": MELI_APP_ID,
-        "client_secret": MELI_CLIENT_SECRET
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    try:
-        resp = requests.post(url, data=payload, headers=headers, timeout=5)
-        if resp.status_code == 200:
-            return resp.json().get("access_token")
-    except Exception:
-        pass
-    return None
 
 @app.get("/")
 def home():
@@ -72,20 +50,18 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
+    # Trata a palavra "todas" para buscar termos populares e garantir retorno de produtos
     search_term = category.lower().strip()
     if search_term in ["todas", "mix", "all", ""]:
-        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "utilidades", "audio", "games"]
+        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "games", "audio"]
         search_term = random.choice(search_terms)
 
-    token = get_meli_token()
+    # Requisição direta à API pública do Mercado Livre Brasil
     search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
-    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
+    
     raw_results = []
     try:
         resp = requests.get(search_url, headers=headers, timeout=8)
@@ -95,90 +71,30 @@ def get_mercadolivre_offers(
     except Exception:
         raw_results = []
 
-    # Fallback com URLs diretas dos produtos no Mercado Livre
-    if not raw_results:
-        raw_results = [
-            {
-                "id": "MLB001", 
-                "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável", 
-                "price": 239.00, 
-                "original_price": 319.90, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB28941235", 
-                "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"
-            },
-            {
-                "id": "MLB002", 
-                "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt", 
-                "price": 159.90, 
-                "original_price": 249.90, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB19842102", 
-                "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"
-            },
-            {
-                "id": "MLB003", 
-                "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador", 
-                "price": 55.99, 
-                "original_price": 99.99, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB32194012", 
-                "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80"
-            },
-            {
-                "id": "MLB004", 
-                "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC", 
-                "price": 189.00, 
-                "original_price": 299.00, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB21094812", 
-                "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"
-            },
-            {
-                "id": "MLB005", 
-                "title": "Smartwatch Relógio Inteligente Esportivo Bip", 
-                "price": 219.00, 
-                "original_price": 350.00, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB18492019", 
-                "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80"
-            },
-            {
-                "id": "MLB006", 
-                "title": "Carregador Rápido GaN 65W Multiportas USB-C", 
-                "price": 129.90, 
-                "original_price": 199.90, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB29401928", 
-                "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"
-            },
-            {
-                "id": "MLB007", 
-                "title": "Jogo de Panelas Antiaderente 5 Peças Cerâmica", 
-                "price": 189.90, 
-                "original_price": 299.90, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB20491823", 
-                "thumbnail": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=500&q=80"
-            },
-            {
-                "id": "MLB008", 
-                "title": "Mouse Sem Fio Recarregável Ergonômico RGB", 
-                "price": 45.90, 
-                "original_price": 89.90, 
-                "permalink": "https://www.mercadolivre.com.br/p/MLB38291049", 
-                "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
-            }
-        ]
+    # Filtra apenas itens válidos que possuem permalink real retornado pela API
+    valid_items = [item for item in raw_results if item.get("permalink") and item.get("title")]
 
-    random.shuffle(raw_results)
+    if not valid_items:
+        return {"results": [], "total": 0}
+
+    # Embaralha os produtos reais para garantir variedade nas postagens
+    random.shuffle(valid_items)
 
     results = []
-    for item in raw_results[:limit]:
+    for item in valid_items[:limit]:
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         
         discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
         
+        # Garante HTTPS e imagem limpa em alta resolução para o Pinterest
         thumbnail = item.get("thumbnail", "").replace("http://", "https://")
         if "-I.jpg" in thumbnail:
             thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
+        # Pega a URL REAL e dinâmica de anúncio do Mercado Livre
         permalink = item.get("permalink", "")
 
         results.append({
