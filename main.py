@@ -50,14 +50,13 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Trata a palavra "todas" para termos de alto volume
     search_term = category.lower().strip()
     if search_term in ["todas", "mix", "all", ""]:
-        search_terms = ["ofertas", "promocao", "ferramentas", "tecnologia", "casa"]
+        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "utilidades", "audio", "games"]
         search_term = random.choice(search_terms)
 
-    # Consulta direta à API oficial sem depender de ScraperAPI (rápida e sem timeout)
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
+    # Consulta direta à API do Mercado Livre Brasil com filtros de busca dinâmica
+    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&sort=relevance"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json"
@@ -65,33 +64,33 @@ def get_mercadolivre_offers(
     
     raw_results = []
     try:
-        resp = requests.get(search_url, headers=headers, timeout=8)
+        resp = requests.get(search_url, headers=headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             raw_results = data.get("results", [])
     except Exception:
         raw_results = []
 
-    # Se a busca dinâmica não devolver resultados, aciona o Fallback dinâmico integrado
+    # Caso a busca retorne vazia, tenta uma rota secundária de itens em alta
     if not raw_results:
-        backup_items = [
-            {"id": "MLB001", "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável", "price": 239.00, "original_price": 319.90, "permalink": "https://www.mercadolivre.com.br/ofertas", "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"},
-            {"id": "MLB002", "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt", "price": 159.90, "original_price": 249.90, "permalink": "https://www.mercadolivre.com.br/ofertas", "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"},
-            {"id": "MLB003", "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador", "price": 55.99, "original_price": 99.99, "permalink": "https://www.mercadolivre.com.br/ofertas", "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80"},
-            {"id": "MLB004", "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC", "price": 189.00, "original_price": 299.00, "permalink": "https://www.mercadolivre.com.br/ofertas", "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"}
-        ]
-        raw_results = backup_items
+        try:
+            fallback_url = "https://api.mercadolibre.com/sites/MLB/search?q=promocao"
+            resp = requests.get(fallback_url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                raw_results = resp.json().get("results", [])
+        except Exception:
+            raw_results = []
 
     random.shuffle(raw_results)
 
     results = []
     for item in raw_results[:limit]:
         price = item.get("price", 0.0)
-        original_price = item.get("original_price") or (price * 1.25)
+        original_price = item.get("original_price") or (price * 1.22)
         
-        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
+        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 18
         
-        # Correção de URL para HTTPS e alta resolução (compatível com Pinterest)
+        # Ajusta a URL da imagem para HTTPS e alta definição
         thumbnail = item.get("thumbnail", "").replace("http://", "https://")
         if "-I.jpg" in thumbnail:
             thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
