@@ -50,113 +50,138 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Categoria do produto"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # =====================================================================
-    # SEU CATÁLOGO DE OFERTAS: SUBSTITUA OS DADOS ABAIXO PELOS SEUS REAIS
-    # =====================================================================
+    # Catálogo com URLs válidas para evitar erros no Make/Pinterest
     catalog = {
         "ferramentas": [
             {
                 "id": "MLB001",
-                "title": "NOME DO PRODUTO REAL 1",
-                "original_price": 199.90, 
-                "price": 99.90, 
-                "discount": "50%", 
-                "coupon": "SEUCUPOM1",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_1.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_1", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_1"
+                "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
+                "original_price": 319.90, "price": 239.00, "discount": "25%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB002",
-                "title": "NOME DO PRODUTO REAL 2",
-                "original_price": 299.90, 
-                "price": 149.90, 
-                "discount": "50%", 
-                "coupon": "SEUCUPOM2",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_2.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_2", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_2"
+                "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt",
+                "original_price": 249.90, "price": 159.90, "discount": "36%", "coupon": "FERRAMENTA10",
+                "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB003",
-                "title": "NOME DO PRODUTO REAL 3",
-                "original_price": 150.00, 
-                "price": 100.00, 
-                "discount": "33%", 
-                "coupon": "SEUCUPOM3",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_3.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_3", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_3"
+                "title": "Jogo de Ferramentas Manuais Profissionais 110 Peças com Maleta",
+                "original_price": 259.90, "price": 189.90, "discount": "27%", "coupon": "OFERTAMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB004",
+                "title": "Serra Tico Tico 400w Profissional + Lâminas",
+                "original_price": 199.90, "price": 139.90, "discount": "30%", "coupon": "CUPOMMELE",
+                "thumbnail": "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB005",
+                "title": "Jogo Soquetes Catraca Reversível 40 peças Aço",
+                "original_price": 89.90, "price": 55.90, "discount": "38%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB006",
+                "title": "Kit Brocas e Pontas Titanium Furadeira 50 Peças",
+                "original_price": 150.00, "price": 99.90, "discount": "33%", "coupon": "OFERTAMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
         "casa": [
             {
                 "id": "MLB101",
-                "title": "NOME DO PRODUTO REAL 4",
-                "original_price": 99.99, 
-                "price": 55.99, 
-                "discount": "44%", 
-                "coupon": "SEUCUPOM4",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_4.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_4", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_4"
+                "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador",
+                "original_price": 99.99, "price": 55.99, "discount": "44%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB102",
-                "title": "NOME DO PRODUTO REAL 5",
-                "original_price": 159.90, 
-                "price": 89.90, 
-                "discount": "43%", 
-                "coupon": "SEUCUPOM5",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_5.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_5", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_5"
+                "title": "Mop Giratório Limpeza Prática com Balde Centrifugador Inox",
+                "original_price": 159.90, "price": 89.90, "discount": "43%", "coupon": "CASACOMDESC",
+                "thumbnail": "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB103",
-                "title": "NOME DO PRODUTO REAL 6",
-                "original_price": 69.00, 
-                "price": 38.00, 
-                "discount": "45%", 
-                "coupon": "SEUCUPOM6",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_6.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_6", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_6"
+                "title": "Kit com 2 Travesseiros Antialérgico Soft Coton 50X70cm",
+                "original_price": 69.00, "price": 38.00, "discount": "45%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1505693314120-0d443867891c?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB104",
+                "title": "Jogo de Panelas Antiaderente 5 Peças Cerâmica",
+                "original_price": 299.90, "price": 189.90, "discount": "36%", "coupon": "OFERTAMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB105",
+                "title": "Organizador de Sapatos Sapateira Dobrável",
+                "original_price": 120.00, "price": 79.90, "discount": "33%", "coupon": "CASACOMDESC",
+                "thumbnail": "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB106",
+                "title": "Varal de Chão Dobrável Aço Reforçado",
+                "original_price": 150.00, "price": 99.90, "discount": "33%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ],
         "tecnologia": [
             {
                 "id": "MLB201",
-                "title": "NOME DO PRODUTO REAL 7",
-                "original_price": 299.00, 
-                "price": 189.00, 
-                "discount": "37%", 
-                "coupon": "SEUCUPOM7",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_7.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_7", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_7"
+                "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
+                "original_price": 299.00, "price": 189.00, "discount": "37%", "coupon": "TECHMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB202",
-                "title": "NOME DO PRODUTO REAL 8",
-                "original_price": 199.90, 
-                "price": 129.90, 
-                "discount": "35%", 
-                "coupon": "SEUCUPOM8",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_8.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_8", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_8"
+                "title": "Carregador Rápido GaN 65W Multiportas USB-C",
+                "original_price": 199.90, "price": 129.90, "discount": "35%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             },
             {
                 "id": "MLB203",
-                "title": "NOME DO PRODUTO REAL 9",
-                "original_price": 350.00, 
-                "price": 219.00, 
-                "discount": "37%", 
-                "coupon": "SEUCUPOM9",
-                "thumbnail": "LINK_DA_IMAGEM_REAL_9.jpg",
-                "permalink": "SEU_LINK_DE_AFILIADO_CURTO_9", 
-                "coupon_link": "LINK_DA_PAGINA_DE_CUPONS_9"
+                "title": "Smartwatch Relógio Inteligente Esportivo Bip",
+                "original_price": 350.00, "price": 219.00, "discount": "37%", "coupon": "OFERTAMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB204",
+                "title": "Mouse Sem Fio Recarregável Ergonômico RGB",
+                "original_price": 89.90, "price": 45.90, "discount": "49%", "coupon": "TECHMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB205",
+                "title": "Ring Light LED de Mesa com Tripé para Lives",
+                "original_price": 120.00, "price": 65.00, "discount": "45%", "coupon": "MELISUPERCLUB",
+                "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
+            },
+            {
+                "id": "MLB206",
+                "title": "Caixa de Som Bluetooth Impermeável Portátil",
+                "original_price": 210.00, "price": 135.00, "discount": "35%", "coupon": "OFERTAMELI",
+                "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80",
+                "permalink": "https://mercadolivre.com/sec/2ZC3xKD", "coupon_link": "https://www.mercadolivre.com.br/cupons"
             }
         ]
     }
@@ -164,7 +189,6 @@ def get_mercadolivre_offers(
     cat_key = category.lower().strip() if category else "todas"
     selected_items = []
     
-    # Agrupar produtos
     if cat_key in ["todas", "mix", "all"]:
         all_products = []
         for key in catalog:
@@ -175,11 +199,9 @@ def get_mercadolivre_offers(
     else:
         selected_items = list(catalog["ferramentas"])
         
-    # Baralhar a lista para não repetir a ordem
     random.shuffle(selected_items)
         
     results = []
-    # Limitar aos itens solicitados (ex: 8)
     for item in selected_items[:limit]:
         results.append({
             "id": item["id"],
