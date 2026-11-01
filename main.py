@@ -4,6 +4,7 @@ import hashlib
 import json
 import random
 import requests
+import urllib.parse
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -69,8 +70,7 @@ def get_mercadolivre_offers(
     except Exception:
         raw_results = []
 
-    # Camada de Proteção: se o Mercado Livre bloquear a busca via Cloudflare no Render,
-    # utiliza este catálogo dinâmico com produtos reais e permalinks 100% funcionais do ML Brasil.
+    # Se a chamada via Cloudflare falhar no Render, utiliza esta lista base com termos de busca limpos
     if not raw_results:
         raw_results = [
             {
@@ -78,7 +78,6 @@ def get_mercadolivre_offers(
                 "title": "Fone de Ouvido Bluetooth Sem Fio Ruído Ativo ANC",
                 "price": 189.00,
                 "original_price": 299.00,
-                "permalink": "https://www.mercadolivre.com.br/fone-de-ouvido-sem-fio-bluetooth/p/MLB21094812",
                 "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"
             },
             {
@@ -86,7 +85,6 @@ def get_mercadolivre_offers(
                 "title": "Carregador Rápido GaN 65W Multiportas USB-C",
                 "price": 129.90,
                 "original_price": 199.90,
-                "permalink": "https://www.mercadolivre.com.br/carregador-gan-65w/p/MLB29401928",
                 "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"
             },
             {
@@ -94,7 +92,6 @@ def get_mercadolivre_offers(
                 "title": "Smartwatch Relógio Inteligente Esportivo Bip",
                 "price": 219.00,
                 "original_price": 350.00,
-                "permalink": "https://www.mercadolivre.com.br/relogio-smartwatch-esportivo/p/MLB18492019",
                 "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80"
             },
             {
@@ -102,7 +99,6 @@ def get_mercadolivre_offers(
                 "title": "Mouse Sem Fio Recarregável Ergonômico RGB",
                 "price": 45.90,
                 "original_price": 89.90,
-                "permalink": "https://www.mercadolivre.com.br/mouse-sem-fio-ergonomico/p/MLB38291049",
                 "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
             },
             {
@@ -110,7 +106,6 @@ def get_mercadolivre_offers(
                 "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt",
                 "price": 159.90,
                 "original_price": 249.90,
-                "permalink": "https://www.mercadolivre.com.br/parafusadeira-furadeira-12v/p/MLB19842102",
                 "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"
             },
             {
@@ -118,7 +113,6 @@ def get_mercadolivre_offers(
                 "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
                 "price": 239.00,
                 "original_price": 319.90,
-                "permalink": "https://www.mercadolivre.com.br/bolsa-maleta-ferramentas/p/MLB28941235",
                 "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"
             },
             {
@@ -126,7 +120,6 @@ def get_mercadolivre_offers(
                 "title": "Cesto De Roupa Suja Bambu 72L Dobravel Organizador",
                 "price": 55.99,
                 "original_price": 99.99,
-                "permalink": "https://www.mercadolivre.com.br/cesto-roupa-bambu-72l/p/MLB32194012",
                 "thumbnail": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80"
             },
             {
@@ -134,16 +127,15 @@ def get_mercadolivre_offers(
                 "title": "Jogo de Panelas Antiaderente 5 Peças Cerâmica",
                 "price": 189.90,
                 "original_price": 299.90,
-                "permalink": "https://www.mercadolivre.com.br/jogo-de-panelas-antiaderente/p/MLB20491823",
                 "thumbnail": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=500&q=80"
             }
         ]
 
-    # Embaralha para que cada execução no Make traga seleções variadas
     random.shuffle(raw_results)
 
     results = []
     for item in raw_results[:limit]:
+        title = item.get("title", "")
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
@@ -154,11 +146,15 @@ def get_mercadolivre_offers(
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-        permalink = item.get("permalink", "")
+        # Pega o permalink retornado pela API ou constrói a URL de busca direta no Mercado Livre
+        permalink = item.get("permalink")
+        if not permalink or "/p/MLB" in permalink:
+            encoded_query = urllib.parse.quote(title)
+            permalink = f"https://lista.mercadolivre.com.br/{encoded_query}"
 
         results.append({
             "id": item.get("id"),
-            "title": item.get("title"),
+            "title": title,
             "permalink": permalink,
             "coupon_link": "https://www.mercadolivre.com.br/cupons",
             "original_price": round(original_price, 2),
@@ -166,7 +162,7 @@ def get_mercadolivre_offers(
             "discount": f"{discount_pct}%",
             "coupon": "OFERTAMELI",
             "thumbnail": thumbnail,
-            "description": f"Aproveite esta super oferta: {item.get('title')}"
+            "description": f"Aproveite esta super oferta: {title}"
         })
 
     return {"results": results, "total": len(results)}
