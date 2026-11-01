@@ -4,6 +4,7 @@ import hashlib
 import json
 import random
 import requests
+import urllib.parse
 from fastapi import FastAPI, Query
 
 app = FastAPI()
@@ -12,9 +13,20 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
+# Tag de Afiliado Mercado Livre
+MELI_AFFILIATE_TAG = os.getenv("MELI_AFFILIATE_TAG", "").strip()
+
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
+
+def build_meli_search_link(title_str):
+    """Constrói a URL de busca direta no Mercado Livre com o título exato do produto"""
+    encoded_query = urllib.parse.quote(title_str)
+    base_link = f"https://lista.mercadolivre.com.br/{encoded_query}"
+    if MELI_AFFILIATE_TAG:
+        base_link = f"{base_link}#matt_tool={MELI_AFFILIATE_TAG}"
+    return base_link
 
 @app.get("/")
 def home():
@@ -50,71 +62,101 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Catálogo de ofertas com links diretos de afiliado (formato meli.la / sec)
-    # Subtitua os links pelas suas URLs geradas no painel de afiliados Mercado Livre
-    affiliate_offers = [
-        {
-            "id": "MLB001",
-            "title": "Kit 2 Travesseiros Antialérgico Soft Coton 50x70cm Branco",
-            "price": 38.00,
-            "original_price": 69.00,
-            "permalink": "https://meli.la/2ZC3xKD",  # Insira aqui o seu link gerado meli.la
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_897120-MLA50918239012_072022-F.jpg"
-        },
-        {
-            "id": "MLB002",
-            "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC",
-            "price": 154.23,
-            "original_price": 239.00,
-            "permalink": "https://meli.la/2ZC3xKD",  # Substitua pelo seu link meli.la deste produto
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_665471-MLA48644558066_122021-F.jpg"
-        },
-        {
-            "id": "MLB003",
-            "title": "Smartwatch Relógio Inteligente Amazfit Bip 5 GPS",
-            "price": 389.00,
-            "original_price": 499.00,
-            "permalink": "https://meli.la/2ZC3xKD",  # Substitua pelo seu link meli.la deste produto
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_897521-MLA71295248102_082023-F.jpg"
-        },
-        {
-            "id": "MLB004",
-            "title": "Carregador Rápido Baseus GaN 65W Multiportas USB-C",
-            "price": 129.90,
-            "original_price": 199.90,
-            "permalink": "https://meli.la/2ZC3xKD",  # Substitua pelo seu link meli.la deste produto
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789456-MLA54981203491_042023-F.jpg"
-        },
-        {
-            "id": "MLB005",
-            "title": "Mouse Sem Fio Ergonômico Recarregável RGB",
-            "price": 45.90,
-            "original_price": 89.90,
-            "permalink": "https://meli.la/2ZC3xKD",  # Substitua pelo seu link meli.la deste produto
-            "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
-        }
-    ]
+    search_term = category.lower().strip()
+    if search_term in ["todas", "mix", "all", ""]:
+        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "games", "audio", "utilidades"]
+        search_term = random.choice(search_terms)
 
-    # Seleciona ofertas aleatórias para diversificar as postagens
-    selected_items = random.sample(affiliate_offers, min(limit, len(affiliate_offers)))
+    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=30"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+    
+    raw_results = []
+    try:
+        resp = requests.get(search_url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            raw_results = data.get("results", [])
+    except Exception:
+        raw_results = []
+
+    # Lista fallback com títulos e produtos dinâmicos reais (sem URLs estáticas duplicadas)
+    if not raw_results:
+        raw_results = [
+            {
+                "id": "MLB001",
+                "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC",
+                "price": 154.23,
+                "original_price": 239.00,
+                "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"
+            },
+            {
+                "id": "MLB002",
+                "title": "Smartwatch Relógio Inteligente Amazfit Bip 5 GPS",
+                "price": 389.00,
+                "original_price": 499.00,
+                "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80"
+            },
+            {
+                "id": "MLB003",
+                "title": "Carregador Rápido Baseus GaN 65W Multiportas USB-C",
+                "price": 129.90,
+                "original_price": 199.90,
+                "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"
+            },
+            {
+                "id": "MLB004",
+                "title": "Mouse Sem Fio Recarregável Ergonômico RGB",
+                "price": 45.90,
+                "original_price": 89.90,
+                "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
+            },
+            {
+                "id": "MLB005",
+                "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt",
+                "price": 159.90,
+                "original_price": 249.90,
+                "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"
+            },
+            {
+                "id": "MLB006",
+                "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
+                "price": 239.00,
+                "original_price": 319.90,
+                "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"
+            }
+        ]
+
+    random.shuffle(raw_results)
 
     results = []
-    for item in selected_items:
+    for item in raw_results[:limit]:
+        title = item.get("title", "")
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
-        discount_pct = int(((original_price - price) / original_price) * 100)
+        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
+        
+        thumbnail = item.get("thumbnail", "").replace("http://", "https://")
+        if "-I.jpg" in thumbnail:
+            thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
+        elif "-I.webp" in thumbnail:
+            thumbnail = thumbnail.replace("-I.webp", "-O.webp")
+
+        # Constrói o permalink individual dinâmico a partir do próprio título do produto
+        permalink = build_meli_search_link(title)
 
         results.append({
             "id": item.get("id"),
-            "title": item.get("title"),
-            "permalink": item.get("permalink"),
+            "title": title,
+            "permalink": permalink,
             "coupon_link": "https://www.mercadolivre.com.br/cupons",
             "original_price": round(original_price, 2),
             "price": round(price, 2),
             "discount": f"{discount_pct}%",
-            "coupon": "MELISUPERCLUB",
-            "thumbnail": item.get("thumbnail"),
-            "description": f"Aproveite esta super oferta: {item.get('title')}"
+            "coupon": "OFERTAMELI",
+            "thumbnail": thumbnail,
+            "description": f"Aproveite esta super oferta: {title}"
         })
 
     return {"results": results, "total": len(results)}
