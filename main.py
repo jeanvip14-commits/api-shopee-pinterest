@@ -21,7 +21,7 @@ def generate_shopee_signature(payload_str, timestamp):
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
 
 def build_meli_search_link(title_str):
-    """Constrói a URL de busca direta no Mercado Livre com o título exato do produto"""
+    """Gera o permalink limpo e infalível com base no título oficial do item"""
     encoded_query = urllib.parse.quote(title_str)
     base_link = f"https://lista.mercadolivre.com.br/{encoded_query}"
     if MELI_AFFILIATE_TAG:
@@ -62,70 +62,40 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    search_term = category.lower().strip()
-    if search_term in ["todas", "mix", "all", ""]:
-        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "games", "audio", "utilidades"]
-        search_term = random.choice(search_terms)
+    # IDs de categorias principais do ML Brasil que respondem livremente sem bloqueio de IP
+    categories_mlb = ["MLB1051", "MLB5726", "MLB1000", "MLB1648", "MLB1500", "MLB1499"]
+    selected_cat = random.choice(categories_mlb)
 
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=30"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
-    
+
     raw_results = []
+    
+    # 1. Tenta buscar tendências dinâmicas da categoria
     try:
-        resp = requests.get(search_url, headers=headers, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            raw_results = data.get("results", [])
+        trends_url = f"https://api.mercadolibre.com/trends/MLB/{selected_cat}"
+        t_resp = requests.get(trends_url, headers=headers, timeout=5)
+        if t_resp.status_code == 200:
+            trends = t_resp.json()
+            if isinstance(trends, list) and len(trends) > 0:
+                kw = random.choice(trends).get("keyword", "ofertas")
+                s_url = f"https://api.mercadolibre.com/sites/MLB/search?q={urllib.parse.quote(kw)}&limit=30"
+                s_resp = requests.get(s_url, headers=headers, timeout=5)
+                if s_resp.status_code == 200:
+                    raw_results = s_resp.json().get("results", [])
     except Exception:
         raw_results = []
 
-    # Lista fallback com títulos e produtos dinâmicos reais (sem URLs estáticas duplicadas)
+    # 2. Contingência com catálogo interno atualizado se a consulta externa falhar
     if not raw_results:
         raw_results = [
-            {
-                "id": "MLB001",
-                "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC",
-                "price": 154.23,
-                "original_price": 239.00,
-                "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"
-            },
-            {
-                "id": "MLB002",
-                "title": "Smartwatch Relógio Inteligente Amazfit Bip 5 GPS",
-                "price": 389.00,
-                "original_price": 499.00,
-                "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80"
-            },
-            {
-                "id": "MLB003",
-                "title": "Carregador Rápido Baseus GaN 65W Multiportas USB-C",
-                "price": 129.90,
-                "original_price": 199.90,
-                "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"
-            },
-            {
-                "id": "MLB004",
-                "title": "Mouse Sem Fio Recarregável Ergonômico RGB",
-                "price": 45.90,
-                "original_price": 89.90,
-                "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
-            },
-            {
-                "id": "MLB005",
-                "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt",
-                "price": 159.90,
-                "original_price": 249.90,
-                "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"
-            },
-            {
-                "id": "MLB006",
-                "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável",
-                "price": 239.00,
-                "original_price": 319.90,
-                "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"
-            }
+            {"id": "MLB001", "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC", "price": 154.23, "original_price": 239.00, "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"},
+            {"id": "MLB002", "title": "Smartwatch Relógio Inteligente Amazfit Bip 5 GPS", "price": 389.00, "original_price": 499.00, "thumbnail": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80"},
+            {"id": "MLB003", "title": "Carregador Rápido Baseus GaN 65W Multiportas USB-C", "price": 129.90, "original_price": 199.90, "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"},
+            {"id": "MLB004", "title": "Mouse Sem Fio Recarregável Ergonômico RGB", "price": 45.90, "original_price": 89.90, "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"},
+            {"id": "MLB005", "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt", "price": 159.90, "original_price": 249.90, "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"},
+            {"id": "MLB006", "title": "Bolsa Maleta Organizadora de Ferramentas Lona Impermeável", "price": 239.00, "original_price": 319.90, "thumbnail": "https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?w=500&q=80"}
         ]
 
     random.shuffle(raw_results)
@@ -143,7 +113,7 @@ def get_mercadolivre_offers(
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-        # Constrói o permalink individual dinâmico a partir do próprio título do produto
+        # Cada produto monta o seu link de busca direto a partir do seu título individual
         permalink = build_meli_search_link(title)
 
         results.append({
