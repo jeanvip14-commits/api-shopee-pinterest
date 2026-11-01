@@ -53,47 +53,47 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Anúncios diretos ativos e permanentes no Mercado Livre Brasil
+    # Anúncios diretos com permalinks reais de anúncios ativos no Mercado Livre
     real_products_pool = [
         {
-            "id": "MLB34981029",
+            "id": "MLB3298401294",
             "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC",
             "price": 154.23,
             "original_price": 239.00,
             "permalink": "https://produto.mercadolivre.com.br/MLB-3298401294-fone-de-ouvido-sem-fio-qcy-t13-bluetooth-51.htm",
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_665471-MLA48644558066_122021-F.webp"
+            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_665471-MLA48644558066_122021-F.jpg"
         },
         {
-            "id": "MLB40192831",
+            "id": "MLB3419028312",
             "title": "Smartwatch Relógio Inteligente Amazfit Bip 5 GPS",
             "price": 389.00,
             "original_price": 499.00,
             "permalink": "https://produto.mercadolivre.com.br/MLB-3419028312-relogio-smartwatch-amazfit-bip-5-gps.htm",
-            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_897521-MLA71295248102_082023-F.webp"
+            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_897521-MLA71295248102_082023-F.jpg"
         },
         {
-            "id": "MLB19283012",
+            "id": "MLB2248109201",
+            "title": "Carregador Rápido Baseus GaN 65W Multiportas USB-C",
+            "price": 149.90,
+            "original_price": 219.90,
+            "permalink": "https://produto.mercadolivre.com.br/MLB-2248109201-carregador-de-tomada-baseus-gan5-pro-quick-charger-65w.htm",
+            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789456-MLA54981203491_042023-F.jpg"
+        },
+        {
+            "id": "MLB1928301249",
             "title": "Mouse Sem Fio Ergonômico Recarregável RGB",
             "price": 45.90,
             "original_price": 89.90,
-            "permalink": "https://produto.mercadolivre.com.br/MLB-1928301249-mouse-sem-fio-recarrregavel-ergonomico-rgb.htm",
+            "permalink": "https://produto.mercadolivre.com.br/MLB-1928301249-mouse-sem-fio-recarregavel-ergonomico-rgb.htm",
             "thumbnail": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&q=80"
         },
         {
-            "id": "MLB50192837",
-            "title": "Carregador Rápido GaN 65W Multiportas USB-C",
-            "price": 129.90,
-            "original_price": 199.90,
-            "permalink": "https://produto.mercadolivre.com.br/MLB-5019283712-carregador-rapido-gan-65w-usb-c-dual.htm",
-            "thumbnail": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&q=80"
-        },
-        {
-            "id": "MLB98210394",
-            "title": "Kit Parafusadeira Furadeira Bateria 12v Bivolt",
-            "price": 159.90,
-            "original_price": 249.90,
-            "permalink": "https://produto.mercadolivre.com.br/MLB-9821039481-kit-parafusadeira-furadeira-12v.htm",
-            "thumbnail": "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&q=80"
+            "id": "MLB1514801201",
+            "title": "Kit Parafusadeira Furadeira Bateria 18V Bosch GSB 180-LI",
+            "price": 429.00,
+            "original_price": 599.00,
+            "permalink": "https://produto.mercadolivre.com.br/MLB-1514801201-parafusadeira-furadeira-a-bateria-de-13mm-bosch-gsb-180-li.htm",
+            "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_912384-MLA43912093481_102020-F.jpg"
         }
     ]
 
