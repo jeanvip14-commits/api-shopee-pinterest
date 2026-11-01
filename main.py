@@ -12,32 +12,9 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Credenciais Mercado Livre
-MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
-
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
-
-def get_meli_token():
-    """Gera o token OAuth 2.0 dinâmico no Mercado Livre"""
-    if not MELI_APP_ID or not MELI_CLIENT_SECRET:
-        return None
-    url = "https://api.mercadolibre.com/oauth/token"
-    payload = {
-        "grant_type": "client_credentials",
-        "client_id": MELI_APP_ID,
-        "client_secret": MELI_CLIENT_SECRET
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    try:
-        resp = requests.post(url, data=payload, headers=headers, timeout=8)
-        if resp.status_code == 200:
-            return resp.json().get("access_token")
-    except Exception:
-        pass
-    return None
 
 @app.get("/")
 def home():
@@ -73,63 +50,72 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Sorteia termos de buscas dinâmicos quando receber 'todas'
-    search_term = category.lower().strip()
-    if search_term in ["todas", "mix", "all", ""]:
-        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "games", "audio", "utilidades"]
-        search_term = random.choice(search_terms)
-
-    token = get_meli_token()
-    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
+    # IDs das principais categorias oficiais do Mercado Livre Brasil
+    categories = [
+        "MLB1051", # Celulares e Telefones
+        "MLB5726", # Eletrodomésticos
+        "MLB1000", # Eletrônicos, Áudio e Vídeo
+        "MLB1648", # Informática
+        "MLB1500", # Esportes e Fitness
+        "MLB1499"  # Ferramentas e Indústria
+    ]
     
+    selected_cat = random.choice(categories)
+    
+    # Endpoint de tendências / mais vendidos por categoria (não exige OAuth e não bloqueia IP de servidor)
+    url = f"https://api.mercadolibre.com/trends/MLB/{selected_cat}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    raw_results = []
+    
+    items_list = []
     try:
-        resp = requests.get(search_url, headers=headers, timeout=8)
+        resp = requests.get(url, headers=headers, timeout=8)
         if resp.status_code == 200:
-            data = resp.json()
-            raw_results = data.get("results", [])
+            trends = resp.json()
+            # Pega as palavras de tendência e busca pelos itens diretos
+            if isinstance(trends, list) and len(trends) > 0:
+                keyword = random.choice(trends).get("keyword", "ofertas")
+                search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={keyword}&limit=30"
+                s_resp = requests.get(search_url, headers=headers, timeout=8)
+                if s_resp.status_code == 200:
+                    items_list = s_resp.json().get("results", [])
     except Exception:
-        raw_results = []
+        items_list = []
 
-    # Caso ocorra falha de rede na busca por palavra, consulta as ofertas em destaque públicas
-    if not raw_results:
+    # Fallback dinâmico buscando por ofertas globais caso o endpoint de tendências falhe
+    if not items_list:
         try:
-            highlights_url = "https://api.mercadolibre.com/sites/MLB/search?q=promocao&limit=50"
-            resp_hl = requests.get(highlights_url, headers=headers, timeout=8)
-            if resp_hl.status_code == 200:
-                raw_results = resp_hl.json().get("results", [])
+            direct_url = "https://api.mercadolibre.com/sites/MLB/search?q=promo&limit=30"
+            d_resp = requests.get(direct_url, headers=headers, timeout=8)
+            if d_resp.status_code == 200:
+                items_list = d_resp.json().get("results", [])
         except Exception:
-            raw_results = []
+            items_list = []
 
-    # Filtra os produtos garantindo que tenham título e link real (permalink)
-    valid_items = [item for item in raw_results if item.get("permalink") and item.get("title")]
+    # Filtra produtos válidos que possuem título e permalink real
+    valid_products = [p for p in items_list if p.get("permalink") and p.get("title")]
 
-    if not valid_items:
+    if not valid_products:
         return {"results": [], "total": 0}
 
-    # Embaralha para que cada execução traga produtos diferentes
-    random.shuffle(valid_items)
+    random.shuffle(valid_products)
 
     results = []
-    for item in valid_items[:limit]:
+    for item in valid_products[:limit]:
         price = item.get("price", 0.0)
         original_price = item.get("original_price") or (price * 1.25)
         
         discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
         
-        # Ajusta a URL da imagem para HTTPS e alta definição
+        # Ajusta imagem para alta definição e HTTPS
         thumbnail = item.get("thumbnail", "").replace("http://", "https://")
         if "-I.jpg" in thumbnail:
             thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
+        # PERMALINK REAL DO PRODUTO (ex: https://produto.mercadolivre.com.br/MLB-...)
         permalink = item.get("permalink", "")
 
         results.append({
