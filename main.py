@@ -13,6 +13,10 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
+# Credenciais Mercado Livre
+MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
+
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
@@ -70,7 +74,6 @@ def get_mercadolivre_offers(
     except Exception:
         raw_results = []
 
-    # Se a chamada via Cloudflare falhar no Render, utiliza esta lista base com termos de busca limpos
     if not raw_results:
         raw_results = [
             {
@@ -146,7 +149,7 @@ def get_mercadolivre_offers(
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-        # Pega o permalink retornado pela API ou constrói a URL de busca direta no Mercado Livre
+        # Pega a URL de produto da API ou gera a busca direta no Mercado Livre
         permalink = item.get("permalink")
         if not permalink or "/p/MLB" in permalink:
             encoded_query = urllib.parse.quote(title)
