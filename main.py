@@ -13,9 +13,10 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Credenciais Mercado Livre
+# Credenciais e Tag Mercado Livre
 MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
 MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
+MELI_AFFILIATE_TAG = os.getenv("MELI_AFFILIATE_TAG", "").strip()  # Sua tag de rastreio de afiliado
 
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
@@ -149,11 +150,14 @@ def get_mercadolivre_offers(
         elif "-I.webp" in thumbnail:
             thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-        # Pega a URL de produto da API ou gera a busca direta no Mercado Livre
         permalink = item.get("permalink")
         if not permalink or "/p/MLB" in permalink:
             encoded_query = urllib.parse.quote(title)
             permalink = f"https://lista.mercadolivre.com.br/{encoded_query}"
+
+        # Injeta a tag de afiliado se configurada
+        if MELI_AFFILIATE_TAG:
+            permalink = f"{permalink}#matt_tool={MELI_AFFILIATE_TAG}"
 
         results.append({
             "id": item.get("id"),
