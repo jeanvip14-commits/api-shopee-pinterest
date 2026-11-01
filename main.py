@@ -12,9 +12,32 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
+# Credenciais Mercado Livre
+MELI_APP_ID = os.getenv("MELI_APP_ID", "").strip()
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "").strip()
+
 def generate_shopee_signature(payload_str, timestamp):
     base_string = f"{SHOPEE_APP_KEY}{timestamp}{payload_str}{SHOPEE_APP_SECRET}"
     return hashlib.sha256(base_string.encode('utf-8')).hexdigest()
+
+def get_meli_token():
+    """Gera o token OAuth 2.0 dinâmico no Mercado Livre"""
+    if not MELI_APP_ID or not MELI_CLIENT_SECRET:
+        return None
+    url = "https://api.mercadolibre.com/oauth/token"
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": MELI_APP_ID,
+        "client_secret": MELI_CLIENT_SECRET
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    try:
+        resp = requests.post(url, data=payload, headers=headers, timeout=8)
+        if resp.status_code == 200:
+            return resp.json().get("access_token")
+    except Exception:
+        pass
+    return None
 
 @app.get("/")
 def home():
@@ -50,76 +73,76 @@ def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Lista de IDs das principais categorias no Mercado Livre Brasil (MLB)
-    categories_mlb = [
-        "MLB1051", # Celulares e Telefones
-        "MLB5726", # Eletrodomésticos
-        "MLB1000", # Eletrônicos, Áudio e Vídeo
-        "MLB1648", # Informática
-        "MLB1500", # Esportes e Fitness
-        "MLB5672", # Acessórios para Veículos
-        "MLB1499"  # Indústria e Comércio (Ferramentas)
-    ]
+    # Sorteia termos de buscas dinâmicos quando receber 'todas'
+    search_term = category.lower().strip()
+    if search_term in ["todas", "mix", "all", ""]:
+        search_terms = ["tecnologia", "ferramentas", "casa", "smartphones", "games", "audio", "utilidades"]
+        search_term = random.choice(search_terms)
+
+    token = get_meli_token()
+    search_url = f"https://api.mercadolibre.com/sites/MLB/search?q={search_term}&limit=50"
     
-    # Define a categoria escolhida ou sorteia uma se for 'todas'
-    cat_id = random.choice(categories_mlb)
-    
-    # Endpoint de destaques por categoria (funciona sem bloqueio de Cloudflare)
-    url = f"https://api.mercadolibre.com/highlights/MLB/category/{cat_id}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
-    
-    items_data = []
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    raw_results = []
     try:
-        resp = requests.get(url, headers=headers, timeout=8)
+        resp = requests.get(search_url, headers=headers, timeout=8)
         if resp.status_code == 200:
-            content = resp.json()
-            # Extrai os IDs dos itens em destaque
-            results_list = content.get("content", [])
-            item_ids = [item["id"] for item in results_list if item.get("type") == "ITEM" and "id" in item]
-            
-            # Seleciona ate 'limit' itens aleatórios para buscar os detalhes
-            random.shuffle(item_ids)
-            selected_ids = item_ids[:limit]
-            
-            if selected_ids:
-                # Consulta multiget dos detalhes dos itens reais
-                ids_str = ",".join(selected_ids)
-                details_url = f"https://api.mercadolibre.com/items?ids={ids_str}"
-                details_resp = requests.get(details_url, headers=headers, timeout=8)
-                if details_resp.status_code == 200:
-                    items_data = details_resp.json()
+            data = resp.json()
+            raw_results = data.get("results", [])
     except Exception:
-        items_data = []
+        raw_results = []
+
+    # Caso ocorra falha de rede na busca por palavra, consulta as ofertas em destaque públicas
+    if not raw_results:
+        try:
+            highlights_url = "https://api.mercadolibre.com/sites/MLB/search?q=promocao&limit=50"
+            resp_hl = requests.get(highlights_url, headers=headers, timeout=8)
+            if resp_hl.status_code == 200:
+                raw_results = resp_hl.json().get("results", [])
+        except Exception:
+            raw_results = []
+
+    # Filtra os produtos garantindo que tenham título e link real (permalink)
+    valid_items = [item for item in raw_results if item.get("permalink") and item.get("title")]
+
+    if not valid_items:
+        return {"results": [], "total": 0}
+
+    # Embaralha para que cada execução traga produtos diferentes
+    random.shuffle(valid_items)
 
     results = []
-    for item_wrap in items_data:
-        if item_wrap.get("code") == 200 and "body" in item_wrap:
-            item = item_wrap["body"]
-            
-            price = item.get("price", 0.0)
-            original_price = item.get("original_price") or (price * 1.20)
-            discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 15
-            
-            # Imagem de alta resolução
-            thumbnail = item.get("secure_thumbnail") or item.get("thumbnail", "")
-            if "-I.jpg" in thumbnail:
-                thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
-            elif "-I.webp" in thumbnail:
-                thumbnail = thumbnail.replace("-I.webp", "-O.webp")
+    for item in valid_items[:limit]:
+        price = item.get("price", 0.0)
+        original_price = item.get("original_price") or (price * 1.25)
+        
+        discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 20
+        
+        # Ajusta a URL da imagem para HTTPS e alta definição
+        thumbnail = item.get("thumbnail", "").replace("http://", "https://")
+        if "-I.jpg" in thumbnail:
+            thumbnail = thumbnail.replace("-I.jpg", "-O.jpg")
+        elif "-I.webp" in thumbnail:
+            thumbnail = thumbnail.replace("-I.webp", "-O.webp")
 
-            results.append({
-                "id": item.get("id"),
-                "title": item.get("title"),
-                "permalink": item.get("permalink"), # LINK REAL DO PRODUTO NO MERCADO LIVRE
-                "coupon_link": "https://www.mercadolivre.com.br/cupons",
-                "original_price": round(original_price, 2),
-                "price": round(price, 2),
-                "discount": f"{discount_pct}%",
-                "coupon": "OFERTAMELI",
-                "thumbnail": thumbnail,
-                "description": f"Aproveite esta super oferta: {item.get('title')}"
-            })
+        permalink = item.get("permalink", "")
+
+        results.append({
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "permalink": permalink,
+            "coupon_link": "https://www.mercadolivre.com.br/cupons",
+            "original_price": round(original_price, 2),
+            "price": round(price, 2),
+            "discount": f"{discount_pct}%",
+            "coupon": "OFERTAMELI",
+            "thumbnail": thumbnail,
+            "description": f"Aproveite esta super oferta: {item.get('title')}"
+        })
 
     return {"results": results, "total": len(results)}
