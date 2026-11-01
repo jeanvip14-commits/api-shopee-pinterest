@@ -13,7 +13,7 @@ app = FastAPI()
 SHOPEE_APP_KEY = os.getenv("SHOPEE_APP_KEY", "").strip()
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET", "").strip()
 
-# Tag de Afiliado Mercado Livre (Ex: 12345678)
+# Tag de Afiliado Mercado Livre
 MELI_AFFILIATE_TAG = os.getenv("MELI_AFFILIATE_TAG", "").strip()
 
 def generate_shopee_signature(payload_str, timestamp):
@@ -26,12 +26,16 @@ def home():
 
 @app.get("/shopee-offers")
 def get_shopee_offers(
-    page: int = Query(1, description="Número da página"),
-    limit: int = Query(100, description="Quantidade de produtos por busca (máx 100)")
+    page: int = Query(None, description="Número da página"),
+    limit: int = Query(50, description="Quantidade de produtos por busca (máx 100)")
 ):
     if not SHOPEE_APP_KEY or not SHOPEE_APP_SECRET:
         return {"error": "Chaves da Shopee nao configuradas!"}
         
+    # Se nao passar pagina, sorteia aleatoriamente entre 1 e 10 para variar ofertas diariamente
+    if page is None:
+        page = random.randint(1, 10)
+
     timestamp = int(time.time())
     url = "https://open-api.affiliate.shopee.com.br/graphql"
     
@@ -47,14 +51,24 @@ def get_shopee_offers(
     }
     
     response = requests.post(url, data=payload_json_compact, headers=headers)
-    return response.json()
+    data = response.json()
+
+    # Embaralha o resultado para diversificar as postagens
+    try:
+        nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
+        if nodes:
+            random.shuffle(nodes)
+            data["data"]["productOfferV2"]["nodes"] = nodes
+    except Exception:
+        pass
+
+    return data
 
 @app.get("/mercadolivre")
 def get_mercadolivre_offers(
     category: str = Query("todas", description="Termo de busca ou categoria"),
     limit: int = Query(8, description="Quantidade de produtos a retornar")
 ):
-    # Categorias dinâmicas
     categories_mlb = ["MLB1051", "MLB5726", "MLB1000", "MLB1648", "MLB1500", "MLB1499"]
     selected_cat = random.choice(categories_mlb)
 
@@ -72,7 +86,6 @@ def get_mercadolivre_offers(
     except Exception:
         raw_items = []
 
-    # Lista de contingência dinamicamente rotacionada caso o Render receba resposta vazia
     if not raw_items:
         raw_items = [
             {"id": "MLB01", "title": "Fone de Ouvido Bluetooth QCY T13 Sem Fio ANC", "price": 154.23, "original_price": 239.00, "thumbnail": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"},
@@ -91,7 +104,6 @@ def get_mercadolivre_offers(
         original_price = item.get("original_price") or (price * 1.25)
         discount_pct = int(((original_price - price) / original_price) * 100) if original_price > price else 15
         
-        # Constrói o link de busca direta infalível pelo título do produto
         encoded_title = urllib.parse.quote(title)
         permalink = f"https://lista.mercadolivre.com.br/{encoded_title}"
         if MELI_AFFILIATE_TAG:
